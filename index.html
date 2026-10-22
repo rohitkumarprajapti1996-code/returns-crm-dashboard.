@@ -149,6 +149,40 @@ dialog{border:1px solid var(--bd);border-radius:14px;background:var(--cd);color:
 <div id="ups" class="m" style="min-height:18px"></div>
 <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button onclick="g('upd').close()">Close</button><button id="upb" onclick="upGo()" style="background:var(--ac);color:#fff;border-color:var(--ac)">Upload &amp; refresh</button></div></dialog>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
+(function(){
+  var EMAIL="rohitkumarprajapti1996@gmail.com";
+  var URL="https://jtghqhfnruwtsfdxvsra.supabase.co";
+  var KEY="sb_publishable_7oZomBiJG6yC-xW-9X1cng_WGgQiVT6";
+  function message(text,kind){var e=document.getElementById("loginError");if(e){e.textContent=text;e.className="login-error "+(kind||"");}}
+  function unlock(email){var screen=document.getElementById("loginScreen");if(screen)screen.style.display="none";var who=document.querySelector(".who");if(who)who.textContent="Signed in as "+email;}
+  window.crmAuthReady=import("https://esm.sh/@supabase/supabase-js@2").then(function(mod){
+    window.authClient=mod.createClient(URL,KEY);
+    return window.authClient;
+  }).catch(function(){message("The authentication service could not load. Refresh and try again.","error");throw new Error("Supabase client unavailable");});
+  window.localLogin=async function(event){
+    if(event)event.preventDefault();
+    var input=document.getElementById("loginEmail");
+    var email=String(input&&input.value||"").trim().toLowerCase();
+    if(email!==EMAIL){message("This workspace is limited to the authorised work email.","error");return false;}
+    var button=document.querySelector("#loginScreen button[type=submit]");
+    if(button){button.disabled=true;button.textContent="Sending…";}
+    try{
+      var client=await window.crmAuthReady;
+      var result=await client.auth.signInWithOtp({email:email,options:{emailRedirectTo:"https://rohitkumarprajapti1996-code.github.io/returns-crm-dashboard./"}});
+      if(result.error)throw result.error;
+      message("Sign-in link sent. Check Inbox, Spam, and Promotions.","success");
+    }catch(error){message(error.message||"Unable to send the sign-in email.","error");}
+    finally{if(button){button.disabled=false;button.textContent="Send secure sign-in link";}}
+    return false;
+  };
+  window.addEventListener("load",function(){
+    window.crmAuthReady.then(function(client){return client.auth.getSession();}).then(function(result){
+      var user=result.data&&result.data.session&&result.data.session.user;
+      if(user&&String(user.email||"").toLowerCase()===EMAIL)unlock(user.email);
+    }).catch(function(){});
+  });
+})();
+</script><script>
 var TOK="";
 var D=[];
 var U=[{"sr":"SR-NT/00670/2026-2027","auth":"2675","cust":"Punjab Traders ","status":"Under Scanning"},{"sr":"SR-NT/00616/2026-2027","auth":"107","cust":"A K JANGHEL","status":"Under Scanning"},{"sr":"SR-NT/00604/2026-2027","auth":"314791094","cust":"A K JANGHEL","status":"Under Scanning"},{"sr":"SR-NT/00211/2026-2027","auth":"6873352","cust":"YADWINDER BUTTAR","status":"Under Segregation"},{"sr":"SR-NT/00210/2026-2027","auth":"1108781731","cust":"SUMANT KUMAR","status":"Under Segregation"}];
