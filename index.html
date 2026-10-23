@@ -437,10 +437,29 @@ function buildFileChanges(oldRows,newRows,source){
 function movementRefresh(){renderMovements()}
 async function upGo(){
  if(!ADM||CRM_CURRENT_EMAIL!==CRM_ADMIN_EMAIL){g("ups").textContent="Only the CRM administrator can upload data.";return}
- var a=g("f1").files[0],b=g("f2").files[0],s=g("ups"),out=[];if(!a||!b){s.textContent="Choose both the K8 Returns CSV and AAJ RMS Warehouse CSV for a verified refresh. Previous data will be kept until both files are selected.";return}g("upb").disabled=true;
- try{var nd=parseCSV(await readF(a)),nw=parseCSV(await readF(b));ensureColumns(nd,"K8 Returns",["Submission ID","Stage","Return Types","Courier","Submitted At","Filled Qty","Received Qty"]);ensureColumns(nw,"AAJ RMS Warehouse",["SR No","Authorization No","Status","Created Date"]);var previousK8;try{previousK8=JSON.parse(localStorage.getItem("returnsK8Snapshot")||"null")||D}catch(e){previousK8=D}var previousWH=WHSNAP||[];D=nd;WHSNAP=nw;syncWarehouseLinks();MOVES=buildFileChanges(previousK8,nd,"K8").concat(buildFileChanges(previousWH,nw,"AAJ RMS"));try{localStorage.setItem("returnsK8Snapshot",JSON.stringify(nd));localStorage.setItem("returnsWarehouseSnapshot",JSON.stringify(nw))}catch(e){}renderMovements();g("updbar").innerHTML="🕒 <b>Verified data refresh:</b> "+new Date().toLocaleString()+" · "+D.length.toLocaleString()+" K8 returns · "+WHSNAP.length.toLocaleString()+" AAJ RMS SRs · "+U.length.toLocaleString()+" unmatched RMS SRs";FS={};MSD.forEach(function(m){FS[m[0]]=[]});pg=0;g("upd").close();rn();s.textContent="Verified refresh complete: "+D.length.toLocaleString()+" K8 returns, "+WHSNAP.length.toLocaleString()+" AAJ RMS SRs, "+U.length.toLocaleString()+" unmatched RMS SRs."}catch(e){s.textContent="Import failed: "+e.message}finally{g("upb").disabled=false}
+ var a=g("f1").files[0],b=g("f2").files[0],status=g("ups");
+ if(!a||!b){status.textContent="Select BOTH latest files. Your previous saved data will remain available until both files are uploaded successfully.";return}
+ g("upb").disabled=true;
+ try{
+  status.textContent="Reading both files…";
+  var nextD=parseCSV(await readF(a)),nextW=parseCSV(await readF(b));
+  ensureColumns(nextD,"K8 Returns",["Submission ID","Stage","Return Types","Courier","Submitted At","Filled Qty","Received Qty"]);
+  ensureColumns(nextW,"AAJ RMS Warehouse",["SR No","Authorization No","Status","Created Date"]);
+  if(!nextD.length||!nextW.length)throw new Error("Both files must contain data. The previous saved snapshot has not been changed.");
+  nextD.forEach(function(r){r["SR List"]=r["SR List"]||[];r["SR Count"]=Number(r["SR Count"]||0);r["_s"]=[r["Submission ID"],r["Customer"],r["Customer Code"],r["School"],r["Employee Email"],r["RM Email"],r["Invoice Nos"],r["Tracking Number"],r["ASR No"],r["SR No"]].join(" ").toLowerCase()});
+  status.textContent="Saving shared snapshot securely…";
+  if(!authClient)throw new Error("Supabase is not ready. Refresh the page and sign in again.");
+  var saved=await authClient.from("crm_shared_snapshots").upsert({id:1,k8_data:nextD,warehouse_data:nextW,updated_by:CRM_CURRENT_EMAIL,updated_at:new Date().toISOString()},{onConflict:"id"});
+  if(saved.error)throw new Error("Could not save shared data: "+saved.error.message);
+  var oldD=D,oldW=WHSNAP;D=nextD;WHSNAP=nextW;syncWarehouseLinks();
+  MOVES=buildFileChanges(oldD,D,"K8").concat(buildFileChanges(oldW,WHSNAP,"AAJ RMS"));
+  try{localStorage.setItem("returnsK8Snapshot",JSON.stringify(D));localStorage.setItem("returnsWarehouseSnapshot",JSON.stringify(WHSNAP))}catch(e){}
+  renderMovements();g("updbar").innerHTML="🕒 <b>Last shared refresh:</b> "+new Date().toLocaleString()+" · "+D.length.toLocaleString()+" K8 returns · "+WHSNAP.length.toLocaleString()+" AAJ RMS rows";
+  FS={};MSD.forEach(function(m){FS[m[0]]=[]});pg=0;g("upd").close();rn();
+  status.textContent="Saved for all approved CRM users: "+D.length.toLocaleString()+" returns and "+WHSNAP.length.toLocaleString()+" warehouse rows.";
+ }catch(e){status.textContent="Upload failed. Previous saved data was kept. "+(e&&e.message?e.message:"Please try again.");}
+ finally{g("upb").disabled=false}
 }
-
 // PRINTING DASHBOARD - LOCAL EXCEL/CSV UPLOAD
 var PRINTING_ROWS=[],PRINTING_ORDER=[],PRINTING_RECEIVED=[];
 function readPrintingFile(file){return new Promise(function(resolve,reject){var ext=(file.name.split(".").pop()||"").toLowerCase();if(ext==="csv"){readF(file).then(resolve).catch(reject);return}if(!window.XLSX){reject(new Error("Excel reader unavailable. Try saving the workbook as CSV."));return}var r=new FileReader();r.onload=function(e){try{var wb=XLSX.read(e.target.result,{type:"array"});if(!wb.SheetNames.length)throw Error("No worksheet in "+file.name);resolve(XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]))}catch(x){reject(x)}};r.onerror=function(){reject(Error("Could not read "+file.name))};r.readAsArrayBuffer(file)})}
