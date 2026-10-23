@@ -166,26 +166,49 @@ function parseCSV(txt){var rows=[],row=[],v="",q=false;for(var i=0;i<txt.length;
 async function upGo(){
  if(!ADM||CRM_CURRENT_EMAIL!==CRM_ADMIN_EMAIL){g("ups").textContent="Only the CRM administrator can upload data.";return}
  var a=g("f1").files[0],b=g("f2").files[0],status=g("ups");
- if(!a||!b){status.textContent="Select BOTH latest files. Your previous saved data will remain available until both files are uploaded successfully.";return}
+ if(!a&&!b){status.textContent="Choose a K8 Returns file, an AAJ RMS Warehouse file, or both. Previously saved data will remain until the relevant file is replaced.";return}
  g("upb").disabled=true;
  try{
-  status.textContent="Reading both files…";
-  var nextD=parseCSV(await readF(a)),nextW=parseCSV(await readF(b));
-  ensureColumns(nextD,"K8 Returns",["Submission ID","Stage","Return Types","Courier","Submitted At","Filled Qty","Received Qty"]);
-  ensureColumns(nextW,"AAJ RMS Warehouse",["SR No","Authorization No","Status","Created Date"]);
-  if(!nextD.length||!nextW.length)throw new Error("Both files must contain data. The previous saved snapshot has not been changed.");
-  nextD.forEach(function(r){r["SR List"]=r["SR List"]||[];r["SR Count"]=Number(r["SR Count"]||0);r["_s"]=[r["Submission ID"],r["Customer"],r["Customer Code"],r["School"],r["Employee Email"],r["RM Email"],r["Invoice Nos"],r["Tracking Number"],r["ASR No"],r["SR No"]].join(" ").toLowerCase()});
-  status.textContent="Saving shared snapshot securely…";
   if(!authClient)throw new Error("Supabase is not ready. Refresh the page and sign in again.");
-  var saved=await authClient.from("crm_shared_snapshots").upsert({id:1,k8_data:nextD,warehouse_data:nextW,updated_by:CRM_CURRENT_EMAIL,updated_at:new Date().toISOString()},{onConflict:"id"});
-  if(saved.error)throw new Error("Could not save shared data: "+saved.error.message);
+  status.textContent="Loading the current shared snapshot…";
+  var shared=await authClient.from("crm_shared_snapshots").select("k8_data,warehouse_data").eq("id",1).maybeSingle();
+  if(shared.error)throw new Error("Could not read the current shared data: "+shared.error.message);
+  var nextD=shared.data&&Array.isArray(shared.data.k8_data)?shared.data.k8_data:(Array.isArray(D)?D:[]);
+  var nextW=shared.data&&Array.isArray(shared.data.warehouse_data)?shared.data.warehouse_data:(Array.isArray(WHSNAP)?WHSNAP:[]);
+  try{
+   if(!shared.data){
+    var cachedD=JSON.parse(localStorage.getItem("returnsK8Snapshot")||"null");
+    var cachedW=JSON.parse(localStorage.getItem("returnsWarehouseSnapshot")||"null");
+    if(Array.isArray(cachedD)&&cachedD.length)nextD=cachedD;
+    if(Array.isArray(cachedW)&&cachedW.length)nextW=cachedW;
+   }
+  }catch(e){}
+  if(a){
+   status.textContent="Reading K8 Returns file…";
+   var parsedD=parseCSV(await readF(a));
+   ensureColumns(parsedD,"K8 Returns",["Submission ID","Stage","Return Types","Courier","Submitted At","Filled Qty","Received Qty"]);
+   if(!parsedD.length)throw new Error("The K8 Returns file contains no data. Previously saved data was kept.");
+   parsedD.forEach(function(r){r["SR List"]=r["SR List"]||[];r["SR Count"]=Number(r["SR Count"]||0);r["_s"]=[r["Submission ID"],r["Customer"],r["Customer Code"],r["School"],r["Employee Email"],r["RM Email"],r["Invoice Nos"],r["Tracking Number"],r["ASR No"],r["SR No"]].join(" ").toLowerCase()});
+   nextD=parsedD;
+  }
+  if(b){
+   status.textContent="Reading AAJ RMS Warehouse file…";
+   var parsedW=parseCSV(await readF(b));
+   ensureColumns(parsedW,"AAJ RMS Warehouse",["SR No","Authorization No","Status","Created Date"]);
+   if(!parsedW.length)throw new Error("The AAJ RMS Warehouse file contains no data. Previously saved data was kept.");
+   nextW=parsedW;
+  }
+  status.textContent="Saving uploaded data securely to Supabase…";
+  var now=new Date().toISOString();
+  var saved=await authClient.from("crm_shared_snapshots").upsert({id:1,k8_data:nextD,warehouse_data:nextW,updated_by:CRM_CURRENT_EMAIL,updated_at:now},{onConflict:"id"}).select("k8_data,warehouse_data,updated_at").single();
+  if(saved.error)throw new Error("Could not save to Supabase: "+saved.error.message);
   var oldD=D,oldW=WHSNAP;D=nextD;WHSNAP=nextW;syncWarehouseLinks();
   MOVES=buildFileChanges(oldD,D,"K8").concat(buildFileChanges(oldW,WHSNAP,"AAJ RMS"));
   try{localStorage.setItem("returnsK8Snapshot",JSON.stringify(D));localStorage.setItem("returnsWarehouseSnapshot",JSON.stringify(WHSNAP))}catch(e){}
-  renderMovements();g("updbar").innerHTML="🕒 <b>Last shared refresh:</b> "+new Date().toLocaleString()+" · "+D.length.toLocaleString()+" K8 returns · "+WHSNAP.length.toLocaleString()+" AAJ RMS rows";
-  FS={};MSD.forEach(function(m){FS[m[0]]=[]});pg=0;g("upd").close();rn();
-  status.textContent="Saved for all approved CRM users: "+D.length.toLocaleString()+" returns and "+WHSNAP.length.toLocaleString()+" warehouse rows.";
- }catch(e){status.textContent="Upload failed. Previous saved data was kept. "+(e&&e.message?e.message:"Please try again.");}
+  renderMovements();g("updbar").innerHTML="🕒 <b>Shared data last updated:</b> "+new Date(saved.data.updated_at).toLocaleString()+" · "+D.length.toLocaleString()+" K8 returns · "+WHSNAP.length.toLocaleString()+" AAJ RMS rows";
+  FS={};MSD.forEach(function(m){FS[m[0]]=[]});pg=0;g("upd").close();rn();renderMovements();
+  status.textContent="Saved in Supabase for all approved users. "+(a?"K8 Returns updated. ":"")+(b?"AAJ RMS Warehouse updated. ":"")+"Saved snapshot: "+D.length.toLocaleString()+" returns and "+WHSNAP.length.toLocaleString()+" warehouse rows. Data remains saved until the next successful upload.";
+ }catch(e){status.textContent="Upload failed. Previous shared data was kept. "+(e&&e.message?e.message:"Please try again.");}
  finally{g("upb").disabled=false}
 }
 // Optional historical baseline upload. This remains separate from the latest warehouse upload.
