@@ -1,0 +1,7 @@
+<!doctype html><meta charset="utf-8"><title>CRM Auth Check</title>
+<div id="status">Loading authentication…</div>
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+window.crmCheckClient=createClient("https://jtghqhfnruwtsfdxvsra.supabase.co","sb_publishable_7oZomBiJG6yC-xW-9X1cng_WGgQiVT6");
+document.getElementById("status").textContent="Authentication loaded successfully.";
+</script>
