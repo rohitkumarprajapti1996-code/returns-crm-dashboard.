@@ -16,5 +16,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Install JavaScript parser for scope checks
+        run: npm install --no-save acorn@8
       - name: Validate inline JavaScript and CRM invariants
         run: node scripts/check-inline-js.cjs
