@@ -587,7 +587,7 @@ async function uploadProjectionWorkbook(){
    var matrix=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:"",raw:false,blankrows:false});
    while(matrix.length&&matrix[matrix.length-1].every(function(v){return String(v==null?"":v).trim()===""}))matrix.pop();
    var headerIndex=0;
-   if(name.toLowerCase()==="master data"){var found=matrix.findIndex(function(row){return row.filter(function(v){return String(v==null?"":v).trim()!==""}).length>=5});headerIndex=Math.max(0,found)}
+   if(name.toLowerCase()==="master data"){var found=matrix.findIndex(function(row){return row.some(function(v){return /sku\s*\/\s*title/i.test(String(v||""))})&&row.some(function(v){return /sku code/i.test(String(v||""))})});if(found<0)found=matrix.findIndex(function(row){return row.filter(function(v){return String(v==null?"":v).trim()!==""}).length>=5});headerIndex=Math.max(0,found)}
    else {var found2=matrix.findIndex(function(row){return row.filter(function(v){return String(v==null?"":v).trim()!==""}).length>=3});headerIndex=Math.max(0,found2)}
    var headers=(matrix[headerIndex]||[]).map(function(v,i){return String(v==null?"":v).trim()||("Column "+(i+1))});
    var seen={};headers=headers.map(function(h){var k=h;seen[k]=(seen[k]||0)+1;return seen[k]>1?k+" ("+seen[k]+")":k});
