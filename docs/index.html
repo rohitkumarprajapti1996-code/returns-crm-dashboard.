@@ -140,9 +140,9 @@ td{font-size:10px!important}
 <a class="nv" href="#" onclick="go2('tbl',this);return false">↻ &nbsp;K8 Returns</a>
 <a class="nv" href="#" onclick="go2('saleReturns',this);return false">▤ &nbsp;Sale Returns</a>
 <a class="nv" id="printProjectionNav" href="#projection" onclick="go2('projection',this);return false">▦ &nbsp;Print Projection</a>
-<a class="nv" href="#" onclick="go2('kp',this);return false">▥ &nbsp;Reports</a>
+<a class="nv" href="#" onclick="go2('reports',this);return false">▥ &nbsp;Reports</a>
 <a class="nv" href="#" onclick="upOpen();return false">⇧ &nbsp;Import Data</a>
-<a class="nv" href="#" onclick="document.getElementById('who').scrollIntoView({behavior:'smooth'});return false">⚙ &nbsp;Settings</a>
+<a class="nv" href="#" onclick="go2('settings',this);return false">⚙ &nbsp;Settings</a>
 <div class="sf" id="who"><div>Signed in as <b>preview</b></div><div id="updtxt"></div><div style="margin-top:6px"><span id="adm"><a href="#" onclick="upOpen();return false">Upload data</a> · </span><a href="#" onclick="signOut();return false">Sign out</a></div></div></nav>
 <div class="w"><div class="top"><div class="eyebrow">Operations overview</div><h1>Returns performance</h1><div class="m" id="sub"></div></div>
 <div id="projectionPanel" class="projection-page" hidden>
@@ -166,7 +166,7 @@ td{font-size:10px!important}
 <div class="bar"><input id="saleReturnSearch" placeholder="Search SR No, Authorization No, customer, transporter, GR No…" oninput="renderSaleReturns()" style="flex:1;min-width:240px"><select id="saleReturnStatus" onchange="renderSaleReturns()"><option value="">All statuses</option></select><button onclick="downloadSaleReturns()">⬇ Download filtered CSV</button><span class="m" id="saleReturnInfo"></span></div>
 <div class="tw"><table><thead id="saleReturnHead"></thead><tbody id="saleReturnRows"></tbody></table></div>
 </div>
-<div id="pipe"></div>
+<div id="pipe"></div><section id="crmReportsPanel" class="sh" style="margin-top:12px" hidden><div class="eyebrow">Data exports</div><h2 style="margin:4px 0">Reports &amp; Exports</h2><p class="m">Export each source independently. Source records and book quantities are kept separate.</p><div class="crm-source-grid"><article class="crm-source"><h3>K8 Returns</h3><p class="crm-muted">Export K8 return records.</p><button onclick="dl()">Export K8 CSV</button></article><article class="crm-source"><h3>Sale Returns</h3><p class="crm-muted">Export WH Sale Returns records.</p><button onclick="downloadSaleReturns()">Export Sale Returns CSV</button></article><article class="crm-source"><h3>Print Projection</h3><p class="crm-muted">Export the selected projection worksheet.</p><button onclick="downloadProjectionSheet()">Export Projection CSV</button></article></div></section><section id="crmSettingsPanel" class="sh" style="margin-top:12px" hidden><div class="eyebrow">Account settings</div><h2 style="margin:4px 0">Settings</h2><p class="m">Signed-in account and session controls.</p><div class="crm-profile"><div class="crm-avatar">RK</div><div><div class="m">Signed in as</div><b id="crmSettingsEmail">Loading account…</b><div class="m">Access level is managed by CRM permissions.</div></div></div><div style="margin-top:14px"><button onclick="signOut()">Sign out</button></div></section>
 <div class="chips" id="chips"></div>
 <div class="chips" id="wch" style="margin-top:0"></div>
 <div class="sh" id="movementPanel" style="margin-top:12px"><h2>Warehouse Status Movement</h2>
@@ -204,9 +204,9 @@ td{font-size:10px!important}
 <dialog id="upd"><h3 style="margin:0 0 4px">Upload daily data</h3>
 <div class="m">Choose today's CSV files. Each file you upload replaces the existing data for that file.</div>
 <p><label>1. Returns file (k8_returns_all_….csv)<br><input type="file" id="f1" accept=".csv"></label></p>
-<p><label>2. Warehouse file (SaleReturn-….csv)<br><input type="file" id="f2" accept=".csv"></label></p>
+<p><label>2. WH Sale Returns file (SaleReturn-….csv)<br><input type="file" id="f2" accept=".csv"></label></p><p><label>3. Print Projection workbook (.xlsx / .xlsm)<br><input type="file" id="f3" accept=".xlsx,.xls,.xlsm"></label></p><div class="m">Projection is saved separately from the K8 and Sale Returns snapshot.</div>
 <div id="ups" class="m" style="min-height:18px"></div>
-<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button onclick="g('upd').close()">Close</button><button id="upb" onclick="upGo()" style="background:var(--ac);color:#fff;border-color:var(--ac)">Upload &amp; refresh</button></div></dialog>
+<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button onclick="g('upd').close()">Close</button><button id="upb" onclick="upGo()" style="background:var(--ac);color:#fff;border-color:var(--ac)">Upload K8 / Sale Returns</button><button type="button" onclick="importProjectionFromDialog()">Import Projection</button></div></dialog>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js">
 window.addEventListener("hashchange",function(){if(location.hash==="#projection"){var link=g("printProjectionNav");if(link)go2("projection",link)}});
 </script>
@@ -216,7 +216,7 @@ var D=[];
 var U=[{"sr":"SR-NT/00670/2026-2027","auth":"2675","cust":"Punjab Traders ","status":"Under Scanning"},{"sr":"SR-NT/00616/2026-2027","auth":"107","cust":"A K JANGHEL","status":"Under Scanning"},{"sr":"SR-NT/00604/2026-2027","auth":"314791094","cust":"A K JANGHEL","status":"Under Scanning"},{"sr":"SR-NT/00211/2026-2027","auth":"6873352","cust":"YADWINDER BUTTAR","status":"Under Segregation"},{"sr":"SR-NT/00210/2026-2027","auth":"1108781731","cust":"SUMANT KUMAR","status":"Under Segregation"}];
 function go2(id,el){
  var w=document.querySelector(".w"),p=g("printingPanel"),srp=g("saleReturnsPanel"),prj=g("projectionPanel");
- var special=(id==="printing"||id==="saleReturns"||id==="projection");
+ var special=(id==="printing"||id==="saleReturns"||id==="projection"||id==="reports"||id==="settings");
  if(w){
   Array.prototype.forEach.call(w.children,function(c){
    if(!c.hasAttribute("data-print-view-saved")){
@@ -225,7 +225,7 @@ function go2(id,el){
     c.setAttribute("data-print-view-display",c.style.display||"");
    }
    if(special){
-    var target=id==="printing"?p:(id==="saleReturns"?srp:prj);
+    var target=id==="printing"?p:(id==="saleReturns"?srp:(id==="projection"?prj:(id==="reports"?g("crmReportsPanel"):g("crmSettingsPanel"))));
     c.hidden=(c!==target);
     c.style.display=(c===target)?"block":"none";
    }else{
@@ -243,6 +243,8 @@ function go2(id,el){
  }else if(id==="saleReturns"){
   if(typeof renderSaleReturns==="function")renderSaleReturns();
   if(srp)srp.scrollIntoView({behavior:"smooth",block:"start"});
+ }else if(id==="reports"){if(g("crmReportsPanel"))g("crmReportsPanel").scrollIntoView({behavior:"smooth",block:"start"});
+ }else if(id==="settings"){var mail=g("crmSettingsEmail");if(mail)mail.textContent=CRM_CURRENT_EMAIL||"Not signed in";if(g("crmSettingsPanel"))g("crmSettingsPanel").scrollIntoView({behavior:"smooth",block:"start"});
  }else if(id==="projection"){
   if(prj){prj.hidden=false;prj.style.display="block";prj.scrollIntoView({behavior:"smooth",block:"start"});}
   if(typeof loadProjectionWorkbook==="function"){
@@ -258,7 +260,7 @@ function downloadSaleReturns(){var rows=saleReturnRowsFiltered();if(!rows.length
 function signOut(){if(typeof google==="undefined")return;try{google.script.run.withSuccessHandler(function(){location.reload()}).withFailureHandler(function(){location.reload()}).logout(TOK)}catch(e){location.reload()}}
 if(typeof google==="undefined"){g("who").hidden=false;g("who").innerHTML=g("who").innerHTML.replace("Sign out","Local preview").replace(/<a href="#" onclick="signOut\(\);return false">Local preview<\/a>/, "Local preview")}
 var CRM_ADMIN_EMAIL="rohitkumarprajapti1996@gmail.com",CRM_CURRENT_EMAIL="",ADM=false;function setCrmPermissions(email){CRM_CURRENT_EMAIL=String(email||"").trim().toLowerCase();ADM=CRM_CURRENT_EMAIL===CRM_ADMIN_EMAIL;var a=g("adm"),b=g("imp");if(a)a.hidden=!ADM;if(b)b.hidden=!ADM;var up=g("upOpen");if(up)up.disabled=!ADM;}setCrmPermissions("");
-function upOpen(){if(!ADM||CRM_CURRENT_EMAIL!==CRM_ADMIN_EMAIL){alert("Only the CRM administrator can upload data.");return}g("ups").textContent="";g("f1").value="";g("f2").value="";g("upb").disabled=false;g("upd").showModal()}
+function upOpen(){if(!ADM||CRM_CURRENT_EMAIL!==CRM_ADMIN_EMAIL){alert("Only the CRM administrator can upload data.");return}g("ups").textContent="";g("f1").value="";g("f2").value="";if(g("f3"))g("f3").value="";g("upb").disabled=false;g("upd").showModal()}
 function readF(f){return new Promise(function(ok,no){var r=new FileReader();r.onload=function(){ok(String(r.result).replace(/^\uFEFF/,""))};r.onerror=function(){no(new Error("Could not read "+f.name))};r.readAsText(f)})}
 function parseCSV(txt){var rows=[],row=[],v="",q=false;for(var i=0;i<txt.length;i++){var c=txt[i];if(q){if(c==='"'&&txt[i+1]==='"'){v+='"';i++}else if(c==='"')q=false;else v+=c}else if(c==='"')q=true;else if(c===','){row.push(v);v=""}else if(c==='\n'){row.push(v.replace(/\r$/, ""));rows.push(row);row=[];v=""}else v+=c}if(v.length||row.length){row.push(v.replace(/\r$/, ""));rows.push(row)}if(!rows.length)return[];var heads=rows.shift().map(function(x){return x.trim()});return rows.filter(function(r){return r.some(function(x){return String(x).trim()!==""})}).map(function(r){var o={};heads.forEach(function(h,i){o[h]=r[i]===undefined?"":r[i]});return o})}
 async function upGo(){
@@ -707,8 +709,8 @@ function signOut(){if(authClient){authClient.auth.signOut().finally(function(){l
 var PRINT_PROJECTION_DATA={},PRINT_PROJECTION_NAME="",PRINT_PROJECTION_UPDATED="";
 function projectionEsc(v){return typeof esc==="function"?esc(String(v==null?"":v)):String(v==null?"":v).replace(/[&<>"']/g,function(c){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]})}
 function projectionStatus(t){var e=g("projectionStatus");if(e)e.textContent=t}
-async function uploadProjectionWorkbook(){
- var file=g("projectionFile")&&g("projectionFile").files[0],btn=g("projectionUploadBtn");
+async function uploadProjectionWorkbook(fileOverride){
+ var file=fileOverride||(g("projectionFile")&&g("projectionFile").files[0]),btn=g("projectionUploadBtn");
  if(!file){projectionStatus("Choose the Print Projection Excel workbook first.");return}
  if(!ADM||!authClient){projectionStatus("Only the approved CRM administrator can import workbook data.");return}
  if(!window.XLSX){projectionStatus("Excel reader could not load. Refresh and try again.");return}
@@ -750,7 +752,8 @@ async function loadProjectionWorkbook(){
   else projectionStatus("Showing saved local backup: "+PRINT_PROJECTION_NAME+". Upload a new workbook to replace it.");
  }catch(e){if(restoreLocalProjectionBackup())projectionStatus("Showing saved local backup; shared workbook could not be reached.");else projectionStatus("Could not load workbook: "+(e.message||"connection error"))}
 }
-function projectionFilePicked(){var f=g("projectionFile")&&g("projectionFile").files[0];if(f){projectionStatus("Selected: "+f.name+" · Importing workbook…");uploadProjectionWorkbook()}}
+function projectionFilePicked(){var f=g("projectionFile")&&g("projectionFile").files[0];if(f){projectionStatus("Selected: "+f.name+" · Importing workbook…");uploadProjectionWorkbook(f)}}
+async function importProjectionFromDialog(){var f=g("f3")&&g("f3").files[0];if(!f){g("ups").textContent="Choose the Print Projection workbook first.";return}if(!ADM||!authClient){g("ups").textContent="Only the approved CRM administrator can import projection data.";return}g("upb").disabled=true;g("ups").textContent="Importing Print Projection workbook…";try{await uploadProjectionWorkbook(f);g("ups").textContent="Projection import finished or reported an error in Print Projection status."}finally{g("upb").disabled=false}}
 function clearProjectionFilters(){["projectionSearch","projectionGrade","projectionSubject","projectionPOStatus"].forEach(function(id){var e=g(id);if(e)e.value=""});renderProjectionSheet()}
 function renderProjectionWorkbook(){
  var sel=g("projectionSheet"),names=Object.keys(PRINT_PROJECTION_DATA),prior=sel&&sel.value;
