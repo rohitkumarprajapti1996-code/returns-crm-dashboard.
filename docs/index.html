@@ -204,7 +204,43 @@ td{font-size:10px!important}
 var TOK="";
 var D=[];
 var U=[{"sr":"SR-NT/00670/2026-2027","auth":"2675","cust":"Punjab Traders ","status":"Under Scanning"},{"sr":"SR-NT/00616/2026-2027","auth":"107","cust":"A K JANGHEL","status":"Under Scanning"},{"sr":"SR-NT/00604/2026-2027","auth":"314791094","cust":"A K JANGHEL","status":"Under Scanning"},{"sr":"SR-NT/00211/2026-2027","auth":"6873352","cust":"YADWINDER BUTTAR","status":"Under Segregation"},{"sr":"SR-NT/00210/2026-2027","auth":"1108781731","cust":"SUMANT KUMAR","status":"Under Segregation"}];
-function go2(id,el){var e=g(id),w=document.querySelector(".w"),p=g("printingPanel"),srp=g("saleReturnsPanel"),prj=g("projectionPanel");if(w&&(p||srp||prj)){for(var i=0;i<w.children.length;i++){var c=w.children[i];if(!c.hasAttribute("data-print-view-saved")){c.setAttribute("data-print-view-saved","1");c.setAttribute("data-print-view-hidden",c.hidden?"1":"0");c.setAttribute("data-print-view-display",c.style.display||"")}if(id==="printing"||id==="saleReturns"||id==="projection"){c.hidden=(c!==(id==="printing"?p:id==="saleReturns"?srp:prj));if(c===(id==="printing"?p:id==="saleReturns"?srp:prj))c.style.display="block"}else{c.hidden=c.getAttribute("data-print-view-hidden")==="1";c.style.display=c.getAttribute("data-print-view-display")||""}}}document.querySelectorAll(".nv").forEach(function(a){a.classList.remove("on")});if(el)el.classList.add("on");if(id==="printing"){if(typeof loadSavedPrintingData==="function")loadSavedPrintingData();if(typeof renderPrintingRows==="function")renderPrintingRows();if(p)p.scrollIntoView({behavior:"smooth",block:"start"})}else if(id==="saleReturns"){renderSaleReturns();if(srp)srp.scrollIntoView({behavior:"smooth",block:"start"})}else if(id==="projection"){loadProjectionWorkbook();if(prj)prj.scrollIntoView({behavior:"smooth",block:"start"})}else if(e)e.scrollIntoView({behavior:"smooth",block:"start"})}
+function go2(id,el){
+ var w=document.querySelector(".w"),p=g("printingPanel"),srp=g("saleReturnsPanel"),prj=g("projectionPanel");
+ var special=(id==="printing"||id==="saleReturns"||id==="projection");
+ if(w){
+  Array.prototype.forEach.call(w.children,function(c){
+   if(!c.hasAttribute("data-print-view-saved")){
+    c.setAttribute("data-print-view-saved","1");
+    c.setAttribute("data-print-view-hidden",c.hidden?"1":"0");
+    c.setAttribute("data-print-view-display",c.style.display||"");
+   }
+   if(special){
+    var target=id==="printing"?p:(id==="saleReturns"?srp:prj);
+    c.hidden=(c!==target);
+    c.style.display=(c===target)?"block":"none";
+   }else{
+    c.hidden=c.getAttribute("data-print-view-hidden")==="1";
+    c.style.display=c.getAttribute("data-print-view-display")||"";
+   }
+  });
+ }
+ document.querySelectorAll(".nv").forEach(function(a){a.classList.remove("on")});
+ if(el)el.classList.add("on");
+ if(id==="printing"){
+  if(typeof loadSavedPrintingData==="function")loadSavedPrintingData();
+  if(typeof renderPrintingRows==="function")renderPrintingRows();
+  if(p)p.scrollIntoView({behavior:"smooth",block:"start"});
+ }else if(id==="saleReturns"){
+  if(typeof renderSaleReturns==="function")renderSaleReturns();
+  if(srp)srp.scrollIntoView({behavior:"smooth",block:"start"});
+ }else if(id==="projection"){
+  if(prj){prj.hidden=false;prj.style.display="block";prj.scrollIntoView({behavior:"smooth",block:"start"});}
+  if(typeof loadProjectionWorkbook==="function"){
+   try{var result=loadProjectionWorkbook();if(result&&typeof result.catch==="function")result.catch(function(err){projectionStatus("Could not load saved workbook: "+(err&&err.message||err));});}
+   catch(err){projectionStatus("Could not load saved workbook: "+(err&&err.message||err));}
+  }
+ }else{var e=g(id);if(e)e.scrollIntoView({behavior:"smooth",block:"start"});}
+}
 
 function saleReturnRowsFiltered(){var q=(g("saleReturnSearch")&&g("saleReturnSearch").value||"").trim().toLowerCase(),st=g("saleReturnStatus")&&g("saleReturnStatus").value||"";return (Array.isArray(WHSNAP)?WHSNAP:[]).filter(function(r){if(st&&String(r.Status||"")!==st)return false;if(!q)return true;return Object.keys(r).some(function(k){return String(r[k]===null||r[k]===undefined?"":r[k]).toLowerCase().indexOf(q)>=0})})}
 function renderSaleReturns(){var rows=saleReturnRowsFiltered(),head=g("saleReturnHead"),body=g("saleReturnRows"),info=g("saleReturnInfo"),sel=g("saleReturnStatus");if(!head||!body)return;var all=Array.isArray(WHSNAP)?WHSNAP:[],cols=all.length?Object.keys(all[0]):[];if(sel){var current=sel.value,vals=Array.from(new Set(all.map(function(r){return String(r.Status||"").trim()}).filter(Boolean))).sort();sel.innerHTML='<option value="">All statuses</option>'+vals.map(function(v){return '<option value="'+esc(v)+'">'+esc(v)+'</option>'}).join("");sel.value=vals.indexOf(current)>=0?current:""}head.innerHTML='<tr>'+cols.map(function(c){return '<th>'+esc(c)+'</th>'}).join("")+'</tr>';body.innerHTML=rows.length?rows.map(function(r){return '<tr>'+cols.map(function(c){return '<td>'+esc(r[c]===undefined||r[c]===null?"":r[c])+'</td>'}).join("")+'</tr>'}).join(""):'<tr><td colspan="'+Math.max(cols.length,1)+'" class="m">No Sale Return records match the current search/filter. Upload the SaleReturn CSV using Import data.</td></tr>';if(info)info.textContent=rows.length.toLocaleString()+" of "+all.length.toLocaleString()+" records"}
