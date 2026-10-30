@@ -694,13 +694,15 @@ async function uploadProjectionWorkbook(){
   var buf=await file.arrayBuffer(),wb=XLSX.read(buf,{type:"array",cellDates:false}),all={},total=0;
   wb.SheetNames.forEach(function(name){
    var matrix=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:"",raw:false,blankrows:false});
+   // Keep ISBNs from the underlying Excel cell value, not Excel's rounded scientific-notation display.
+   var rawMatrix=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:"",raw:true,blankrows:false});
    while(matrix.length&&matrix[matrix.length-1].every(function(v){return String(v==null?"":v).trim()===""}))matrix.pop();
    var headerIndex=0;
    if(name.toLowerCase()==="master data"){var found=matrix.findIndex(function(row){return row.some(function(v){return /sku\s*\/\s*title/i.test(String(v||""))})&&row.some(function(v){return /sku code/i.test(String(v||""))})});if(found<0)found=matrix.findIndex(function(row){return row.filter(function(v){return String(v==null?"":v).trim()!==""}).length>=5});headerIndex=Math.max(0,found)}
    else {var found2=matrix.findIndex(function(row){return row.filter(function(v){return String(v==null?"":v).trim()!==""}).length>=3});headerIndex=Math.max(0,found2)}
    var headers=(matrix[headerIndex]||[]).map(function(v,i){return String(v==null?"":v).trim()||("Column "+(i+1))});
    var seen={};headers=headers.map(function(h){var k=h;seen[k]=(seen[k]||0)+1;return seen[k]>1?k+" ("+seen[k]+")":k});
-   var rows=matrix.slice(headerIndex+1).filter(function(row){return row.some(function(v){return String(v==null?"":v).trim()!==""})}).map(function(row){var o={};headers.forEach(function(h,i){o[h]=row[i]===undefined?"":row[i]});return o});
+   var rows=matrix.slice(headerIndex+1).filter(function(row){return row.some(function(v){return String(v==null?"":v).trim()!==""})}).map(function(row,rowOffset){var sourceIndex=headerIndex+1+rowOffset,rawRow=rawMatrix[sourceIndex]||[],o={};headers.forEach(function(h,i){var v=row[i]===undefined?"":row[i];if(/isbn/i.test(h)){var rv=rawRow[i];if(typeof rv==="number"&&Number.isFinite(rv))v=Number.isInteger(rv)?String(rv):String(rv);else if(rv!==undefined&&rv!==null&&String(rv).trim()!=="")v=String(rv).trim()}o[h]=v});return o});
    all[name]={headers:headers,rows:rows};total+=rows.length;
   });
   if(!Object.keys(all).length||!total)throw new Error("No worksheet data was found in this workbook.");
