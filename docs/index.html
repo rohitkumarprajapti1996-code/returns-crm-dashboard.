@@ -468,8 +468,8 @@ function dashboardAllSources(){
  var kStages=[["Pending","pending","#eab308"],["Approved","approved","#2875ef"],["In Transit","in transit","#f47a18"],["CN Pending","cn pending","#7138e8"],["CN Uploaded","cn uploaded","#10a65a"]];
  var saleStages=Object.keys(wc).map(function(x,i){return{label:x,count:wc[x],color:["#2875ef","#eab308","#7138e8","#0d9488","#10a65a"][i%5]}}),pd=PRINT_PROJECTION_DATA||{},names=Object.keys(pd),master=pd["Master Data"]||(names.length?pd[names[0]]:null),rows=master&&master.rows||[],hs=master&&master.headers||[];
  function key(re){return hs.find(function(h){return re.test(String(h))})||""}function num(v){var z=Number(String(v==null?"":v).replace(/[,\s]/g,""));return Number.isFinite(z)?z:0}
- var tk=key(/sku\s*\/\s*title|title\s*name|name\s*2|book\s*title/i),pk=key(/po\s*status|purchase\s*order\s*status/i),ik=key(/inward\s*qty|inwarded\s*qty|received\s*qty/i),lk=hs.filter(function(h){return /print\s*qty|lot\s*\d+\s*print/i.test(String(h))}),titles={},po=0,inward=0,pending=0;
- rows.forEach(function(r){var t=String((tk&&r[tk])||r["SKU Code"]||"").trim();if(t)titles[t]=1;if(t&&pk&&String(r[pk]||"").trim()&&!/^(pending|not raised|not created|n\/a|na|-)$/i.test(String(r[pk]).trim()))po++;var got=num(ik&&r[ik]);inward+=got;pending+=Math.max(0,lk.reduce(function(a,x){return a+num(r[x])},0)-got)});
+ var tk=key(/sku\s*\/\s*title|title\s*name|name\s*2|book\s*title/i),ek=key(/\berp\b/i),ik=key(/inward\s*qty|inwarded\s*qty|received\s*qty/i),lk=hs.filter(function(h){return /print\s*qty|lot\s*\d+\s*print/i.test(String(h))}),titles={},po=0,inward=0,pending=0;
+ rows.forEach(function(r){var t=String((tk&&r[tk])||r["SKU Code"]||"").trim();if(t)titles[t]=1;if(t&&ek&&String(r[ek]||"").trim())po++;var got=num(ik&&r[ik]);inward+=got;pending+=Math.max(0,lk.reduce(function(a,x){return a+num(r[x])},0)-got)});
  var lotNames=["Lot_1","Lot_2","Lot_3","Blooming Buds"].filter(function(x){return !!pd[x]});
  var lotHtml=lotNames.map(function(x){var sh=pd[x]||{},rr=sh.rows||[];return '<div class="crm-lot"><b>'+esc(x)+'</b><div class="crm-muted">'+fmt(rr.length)+' worksheet rows</div><div class="crm-progress"><span style="width:'+Math.min(100,rr.length?100:0)+'%"></span></div></div>'}).join("");
  var ktotal=k.length,ks=kStages.map(function(x){var found=Object.keys(kc).find(function(y){return y.toLowerCase()===x[1]});return st(x[0],found?kc[found]:0,x[2],fmt(found?books[found]:0)+' books')}).join("");
@@ -775,7 +775,7 @@ function renderProjectionOperationalKpis(){
  var sh=PRINT_PROJECTION_DATA["Master Data"]||PRINT_PROJECTION_DATA[Object.keys(PRINT_PROJECTION_DATA)[0]];
  var rows=sh&&sh.rows||[];
  function findKey(patterns){var hs=sh&&sh.headers||[];return hs.find(function(h){return patterns.test(String(h))})||""}
- var poKey=findKey(/po\s*status|purchase\s*order\s*status/i);
+ var erpKey=findKey(/\berp\b/i);
  var titleKey=findKey(/sku\s*\/\s*title|title\s*name|name\s*2/i);
  var inwardKey=findKey(/inward\s*qty|inwarded\s*qty|received\s*qty/i);
  var lotKeys=(sh&&sh.headers||[]).filter(function(h){return /print\s*qty|lot\s*\d+\s*print/i.test(String(h))});
@@ -783,7 +783,7 @@ function renderProjectionOperationalKpis(){
  var po=0,titles={},inwardTitles={},inward=0,pending=0;
  rows.forEach(function(r){
   var title=String((titleKey&&r[titleKey])||r["SKU Code"]||"").trim();
-  if(title&&poKey&&String(r[poKey]||"").trim()&&!/^(pending|not raised|not created|n\/a|na|-)$/i.test(String(r[poKey]).trim()))po++;
+  if(title&&erpKey&&String(r[erpKey]||"").trim())po++;
   if(title)titles[title]=true;
   var got=num(inwardKey&&r[inwardKey]);inward+=got;if(title&&got>0)inwardTitles[title]=true;
   var planned=lotKeys.reduce(function(sum,k){return sum+num(r[k])},0);
