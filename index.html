@@ -462,7 +462,7 @@ function renderUnifiedFilePipelines(k8Counts,k8Books,L){
  PS.forEach(function(st){box+=tile(false,"st("+JSON.stringify(st[0])+")",st[1],fmt(k8Counts[st[0]]||0),fmt(k8Books[st[0]]||0)+' books',st[2])});
  box+='</div><div class="m" style="margin-top:8px">Warehouse SR stages are shown in the Warehouse SR Pipeline above.</div></div>';
  box+='<div class="pps" style="margin:0;padding:12px"><div class="pph"><h3 style="margin:0">2. Sale Returns</h3><span class="m">'+fmt(sale.length)+' records</span></div><div class="ppr" style="flex-wrap:wrap">';
- if(saleStatusKeys.length){saleStatusKeys.forEach(function(st){box+=tile(false,"go2("saleReturns",document.querySelectorAll(".nv")[2])",esc(st),fmt(saleStatuses[st]),'sale return records',["#eff6ff","#bfdbfe","#1d4ed8"])})}
+ if(saleStatusKeys.length){saleStatusKeys.forEach(function(st){box+=tile(false,'go2("saleReturns",document.querySelectorAll(".nv")[2])',esc(st),fmt(saleStatuses[st]),'sale return records',["#eff6ff","#bfdbfe","#1d4ed8"])})}
  else box+='<div class="m">No Sale Returns file loaded yet.</div>';
  box+='</div><button type="button" style="margin-top:10px" onclick="go2(\'saleReturns\',g(\'saleReturnsNav\'))">Open Sale Returns</button></div>';
  box+='<div class="pps" style="margin:0;padding:12px"><div class="pph"><h3 style="margin:0">3. Print Projection</h3><span class="m">'+fmt(sheetRows)+' records</span></div><div class="ppr" style="flex-wrap:wrap">';
