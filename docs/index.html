@@ -448,6 +448,26 @@ h+=dashboardAllSources();
 g("pipe").innerHTML=h;
 if(typeof applyView==="function")applyView()}
 
+function dashboardAllSources(){
+ function fmt(v){return Number(v||0).toLocaleString()}
+ function card(title,subtitle,kpis,stages,empty){
+  var total=stages.reduce(function(a,x){return a+x.count},0);
+  return '<section class="sh" style="margin:12px 0;padding:16px"><div class="eyebrow">Integrated source</div><h2 style="margin:4px 0">'+title+'</h2><div class="m">'+subtitle+'</div><div class="kp" style="margin:14px 0">'+kpis.map(function(k){return '<div class="k"><div class="m">'+k[0]+'</div><b>'+fmt(k[1])+'</b></div>'}).join("")+'</div>'+(stages.length?stages.map(function(x){var pct=total?Math.round(x.count/total*100):0;return '<div style="max-width:720px;margin:9px 0"><div style="display:flex;justify-content:space-between;font-size:12px"><span>'+esc(x.label)+'</span><b>'+fmt(x.count)+'</b></div><div style="height:7px;background:#e5e7eb;border-radius:9px;margin-top:5px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+x.color+'"></div></div></div>'}).join(""):'<div class="m">'+empty+'</div>')+'</section>';
+ }
+ var dc={};(Array.isArray(D)?D:[]).forEach(function(r){var k=String(r.Stage||"Unknown").trim()||"Unknown";dc[k]=(dc[k]||0)+1});
+ var dStages=Object.keys(dc).sort().map(function(k,i){return{label:k,count:dc[k],color:["#eab308","#2563eb","#f97316","#7c3aed","#16a34a","#64748b"][i%6]}});
+ var wh=Array.isArray(WHSNAP)?WHSNAP:[],wc={};wh.forEach(function(r){var k=String(r.Status||r.status||"Unknown").trim()||"Unknown";wc[k]=(wc[k]||0)+1});
+ var wStages=Object.keys(wc).sort().map(function(k,i){return{label:k,count:wc[k],color:["#eab308","#7c3aed","#16a34a","#2563eb","#f97316","#64748b"][i%6]}});
+ var pd=PRINT_PROJECTION_DATA||{},names=Object.keys(pd),master=pd["Master Data"]||(names.length?pd[names[0]]:null),rows=master&&master.rows||[],hs=master&&master.headers||[];
+ function key(re){return hs.find(function(h){return re.test(String(h))})||""}function num(v){var n=Number(String(v==null?"":v).replace(/[,\\s]/g,""));return Number.isFinite(n)?n:0}
+ var tk=key(/sku\\s*\\/\\s*title|title\\s*name|name\\s*2|book\\s*title/i),pk=key(/po\\s*status|purchase\\s*order\\s*status/i),ik=key(/inward\\s*qty|inwarded\\s*qty|received\\s*qty/i),lk=hs.filter(function(h){return /print\\s*qty|lot\\s*\\d+\\s*print/i.test(String(h))}),titles={},po=0,inward=0,pending=0;
+ rows.forEach(function(r){var t=String((tk&&r[tk])||r["SKU Code"]||"").trim();if(t)titles[t]=1;if(t&&pk&&String(r[pk]||"").trim()&&!/^(pending|not raised|not created|n\\/a|na|-)$/i.test(String(r[pk]).trim()))po++;var got=num(ik&&r[ik]);inward+=got;pending+=Math.max(0,lk.reduce(function(a,k){return a+num(r[k])},0)-got)});
+ var ps=names.map(function(n,i){return{label:n+" rows",count:(pd[n].rows||[]).length,color:["#2563eb","#0d9488","#7c3aed","#f97316","#16a34a"][i%5]}});
+ return '<section class="sh" style="margin:12px 0;padding:16px"><div class="eyebrow">All source files</div><h2 style="margin:4px 0">Combined Returns Dashboard</h2><div class="m">Each section uses its source fields; counts and quantities are not added across unrelated file types.</div></section>'
+ +card("K8 Returns","Return Pipeline and Warehouse SR Pipeline · K8 source",[["Total returns",(D||[]).length],["In transit",(D||[]).filter(function(r){return String(r.Stage||"").toLowerCase()==="in transit"}).length],["CN uploaded",(D||[]).filter(function(r){return String(r.Stage||"").toLowerCase()==="cn uploaded"}).length],["Books filled",(D||[]).reduce(function(a,r){return a+num(r["Filled Qty"])},0)]],dStages,"No K8 data loaded.")
+ +card("Sale Returns","Status summary from the currently wired Sale Returns records",[["Total records",wh.length],["Complete",wh.filter(function(r){return /complete|delivered|closed/i.test(String(r.Status||r.status||""))}).length],["Under scanning",wh.filter(function(r){return /scanning/i.test(String(r.Status||r.status||""))}).length],["Under segregation",wh.filter(function(r){return /segregation/i.test(String(r.Status||r.status||""))}).length]],wStages,"No Sale Returns data loaded.")
+ +card("Print Projection","Workbook worksheets and operational quantities",[["Titles",Object.keys(titles).length],["PO created",po],["Books inward",inward],["Books pending inward",pending]],ps,"No Print Projection workbook loaded.");
+}
 var DS=[["pending","Pending","#eab308"],["approved","Approved","#2563eb"],["in transit","In transit","#f97316"],["cn pending","CN pending","#7c3aed"],["cn uploaded","CN uploaded","#16a34a"],["cancelled","Cancelled","#6b7280"],["rejected","Rejected","#dc2626"]];
 var DW=[["No SR record","No SR yet","#94a3b8"],["Under Scanning","Under scanning","#eab308"],["Under Segregation","Under segregation","#7c3aed"],["Complete","Complete","#16a34a"]];
 function dk(t,i){if(t)ws(DW[i][0]);else st(DS[i][0])}
