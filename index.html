@@ -702,7 +702,7 @@ async function uploadProjectionWorkbook(){
    else {var found2=matrix.findIndex(function(row){return row.filter(function(v){return String(v==null?"":v).trim()!==""}).length>=3});headerIndex=Math.max(0,found2)}
    var headers=(matrix[headerIndex]||[]).map(function(v,i){return String(v==null?"":v).trim()||("Column "+(i+1))});
    var seen={};headers=headers.map(function(h){var k=h;seen[k]=(seen[k]||0)+1;return seen[k]>1?k+" ("+seen[k]+")":k});
-   var rows=matrix.slice(headerIndex+1).filter(function(row){return row.some(function(v){return String(v==null?"":v).trim()!==""})}).map(function(row,rowOffset){var sourceIndex=headerIndex+1+rowOffset,rawRow=rawMatrix[sourceIndex]||[],o={};headers.forEach(function(h,i){var v=row[i]===undefined?"":row[i];if(/isbn/i.test(h)){var rv=rawRow[i];if(typeof rv==="number"&&Number.isFinite(rv))v=Number.isInteger(rv)?String(rv):String(rv);else if(rv!==undefined&&rv!==null&&String(rv).trim()!=="")v=String(rv).trim()}o[h]=v});return o});
+   var rows=matrix.slice(headerIndex+1).map(function(row,offset){return{row:row,sourceIndex:headerIndex+1+offset}}).filter(function(item){return item.row.some(function(v){return String(v==null?"":v).trim()!==""})}).map(function(item){var row=item.row,rawRow=rawMatrix[item.sourceIndex]||[],o={};headers.forEach(function(h,i){var v=row[i]===undefined?"":row[i];if(/isbn/i.test(h)){var rv=rawRow[i];if(typeof rv==="number"&&Number.isFinite(rv))v=String(rv);else if(rv!==undefined&&rv!==null&&String(rv).trim()!=="")v=String(rv).trim()}o[h]=v});return o});
    all[name]={headers:headers,rows:rows};total+=rows.length;
   });
   if(!Object.keys(all).length||!total)throw new Error("No worksheet data was found in this workbook.");
