@@ -710,18 +710,22 @@ async function uploadProjectionWorkbook(){
   var result=await authClient.from("crm_print_projection_workbooks").upsert({id:1,workbook_name:file.name,sheets:all,updated_by:CRM_CURRENT_EMAIL||"",updated_at:new Date().toISOString()},{onConflict:"id"});
   if(result.error)throw result.error;
   PRINT_PROJECTION_DATA=all;PRINT_PROJECTION_NAME=file.name;PRINT_PROJECTION_UPDATED=new Date().toISOString();
+  try{localStorage.setItem("printProjectionWorkbookBackup",JSON.stringify({workbook_name:PRINT_PROJECTION_NAME,sheets:PRINT_PROJECTION_DATA,updated_at:PRINT_PROJECTION_UPDATED,updated_by:CRM_CURRENT_EMAIL||""}))}catch(cacheError){console.warn("Print Projection local backup unavailable",cacheError)}
   renderProjectionWorkbook();projectionStatus("Imported successfully: "+Object.keys(all).length+" worksheets, "+total.toLocaleString()+" data rows. Saved to the shared CRM database.");
  }catch(e){console.error("Print Projection import failed",e);projectionStatus("Import failed; existing saved workbook was kept. "+(e&&e.message?e.message:"Please check the file and try again."))}
  finally{if(btn)btn.disabled=false}
 }
 async function loadProjectionWorkbook(){
- if(!authClient||!g("projectionStatus"))return;
+ if(!g("projectionStatus"))return;
+ function restoreLocalProjectionBackup(){try{var cached=JSON.parse(localStorage.getItem("printProjectionWorkbookBackup")||"null");if(cached&&cached.sheets&&Object.keys(cached.sheets).length){PRINT_PROJECTION_DATA=cached.sheets;PRINT_PROJECTION_NAME=cached.workbook_name||"Saved Print Projection workbook";PRINT_PROJECTION_UPDATED=cached.updated_at||"";renderProjectionWorkbook();return true}}catch(cacheError){console.warn("Could not read local Print Projection backup",cacheError)}return false}
+ if(!authClient){if(!restoreLocalProjectionBackup())projectionStatus("Connect to the CRM to load the shared workbook.");return}
  try{
   var res=await authClient.from("crm_print_projection_workbooks").select("workbook_name,sheets,updated_by,updated_at").eq("id",1).maybeSingle();
-  if(res.error){projectionStatus("Could not load shared workbook: "+res.error.message);return}
-  if(res.data&&res.data.sheets){PRINT_PROJECTION_DATA=res.data.sheets||{};PRINT_PROJECTION_NAME=res.data.workbook_name||"";PRINT_PROJECTION_UPDATED=res.data.updated_at||"";renderProjectionWorkbook();projectionStatus("Loaded shared workbook: "+PRINT_PROJECTION_NAME)}
-  else if(!Object.keys(PRINT_PROJECTION_DATA).length){projectionStatus("No Print Projection workbook has been imported yet. Choose the Excel file and click Import.")}
- }catch(e){projectionStatus("Could not load workbook: "+(e.message||"connection error"))}
+  if(res.error){if(restoreLocalProjectionBackup())projectionStatus("Showing saved local backup; shared workbook could not be reached. "+res.error.message);else projectionStatus("Could not load shared workbook: "+res.error.message);return}
+  if(res.data&&res.data.sheets&&Object.keys(res.data.sheets).length){PRINT_PROJECTION_DATA=res.data.sheets;PRINT_PROJECTION_NAME=res.data.workbook_name||"";PRINT_PROJECTION_UPDATED=res.data.updated_at||"";try{localStorage.setItem("printProjectionWorkbookBackup",JSON.stringify({workbook_name:PRINT_PROJECTION_NAME,sheets:PRINT_PROJECTION_DATA,updated_at:PRINT_PROJECTION_UPDATED,updated_by:res.data.updated_by||""}))}catch(cacheError){console.warn("Print Projection local backup unavailable",cacheError)}renderProjectionWorkbook();projectionStatus("Loaded shared workbook: "+PRINT_PROJECTION_NAME)}
+  else if(!restoreLocalProjectionBackup())projectionStatus("No Print Projection workbook has been imported yet. Choose the Excel file and click Import.");
+  else projectionStatus("Showing saved local backup: "+PRINT_PROJECTION_NAME+". Upload a new workbook to replace it.");
+ }catch(e){if(restoreLocalProjectionBackup())projectionStatus("Showing saved local backup; shared workbook could not be reached.");else projectionStatus("Could not load workbook: "+(e.message||"connection error"))}
 }
 function projectionFilePicked(){var f=g("projectionFile")&&g("projectionFile").files[0];if(f){projectionStatus("Selected: "+f.name+" · Importing workbook…");uploadProjectionWorkbook()}}
 function clearProjectionFilters(){["projectionSearch","projectionGrade","projectionSubject","projectionPOStatus"].forEach(function(id){var e=g(id);if(e)e.value=""});renderProjectionSheet()}
