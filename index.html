@@ -444,7 +444,35 @@ var cards=[
 (m1+m2)?["iw","!","Stage and warehouse status disagree",m1+" return(s) are Approved but Complete in the warehouse; "+m2+" return(s) are CN uploaded but not Complete in the warehouse."]:["ig","✓","Stage and warehouse status agree","No return is ahead of or behind its warehouse status."]];
 if(uS.length||uW.length)cards.push(["iw","!","New status values found",(uS.length?"New stage: "+uS.join(", ")+". ":"")+(uW.length?"New warehouse status: "+uW.join(", ")+". ":"")+"They were added to the charts automatically."]);
 h+='<div id="dq" class="sh"><h2>Data checks</h2><div class="m">Calculated live from the uploaded files.</div></div><div class="ins">'+cards.map(function(c){return'<div class="in '+c[0]+'"><div class="sy">'+c[1]+'</div><div><h4>'+c[2]+'</h4><p>'+c[3]+'</p></div></div>'}).join("")+'</div>';
-g("pipe").innerHTML=h;if(typeof applyView==="function")applyView()}
+g("pipe").innerHTML=h;
+renderUnifiedFilePipelines(cnt,bk,L);
+if(typeof applyView==="function")applyView()}
+
+function renderUnifiedFilePipelines(k8Counts,k8Books,L){
+ var host=g("pipe");if(!host)return;
+ var fmt=function(v){return Number(v||0).toLocaleString()};
+ var sale=Array.isArray(WHSNAP)?WHSNAP:[];
+ var saleStatuses={},saleStatusKeys=[];
+ sale.forEach(function(r){var status=String(r.Status||"Not specified").trim()||"Not specified";saleStatuses[status]=(saleStatuses[status]||0)+1});
+ saleStatusKeys=Object.keys(saleStatuses).sort(function(a,b){return saleStatuses[b]-saleStatuses[a]});
+ var sheets=PRINT_PROJECTION_DATA||{},sheetNames=Object.keys(sheets),sheetRows=0;
+ sheetNames.forEach(function(name){sheetRows+=(sheets[name].rows||[]).length});
+ var box='<section class="pps" id="allFilePipelines" style="margin-top:14px"><div class="pph"><h2>All File Pipelines</h2><span class="m">Live status summaries for K8 Returns, Sale Returns and Print Projection</span></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;padding:14px">';
+ box+='<div class="pps" style="margin:0;padding:12px"><div class="pph"><h3 style="margin:0">1. K8 Returns</h3><span class="m">'+fmt(D.length)+' records</span></div><div class="ppr" style="flex-wrap:wrap">';
+ PS.forEach(function(st){box+=tile(false,"go2('dashboard',g('navDashboard'))",st[1],fmt(k8Counts[st[0]]||0),fmt(k8Books[st[0]]||0)+' books',st[2])});
+ box+='</div><div class="m" style="margin-top:8px">Warehouse SR stages are shown in the Warehouse SR Pipeline above.</div></div>';
+ box+='<div class="pps" style="margin:0;padding:12px"><div class="pph"><h3 style="margin:0">2. Sale Returns</h3><span class="m">'+fmt(sale.length)+' records</span></div><div class="ppr" style="flex-wrap:wrap">';
+ if(saleStatusKeys.length){saleStatusKeys.forEach(function(st){box+=tile(false,"go2('saleReturns',g('saleReturnsNav'))",esc(st),fmt(saleStatuses[st]),'sale return records',["#eff6ff","#bfdbfe","#1d4ed8"])})}
+ else box+='<div class="m">No Sale Returns file loaded yet.</div>';
+ box+='</div><button type="button" style="margin-top:10px" onclick="go2(\'saleReturns\',g(\'saleReturnsNav\'))">Open Sale Returns</button></div>';
+ box+='<div class="pps" style="margin:0;padding:12px"><div class="pph"><h3 style="margin:0">3. Print Projection</h3><span class="m">'+fmt(sheetRows)+' records</span></div><div class="ppr" style="flex-wrap:wrap">';
+ if(sheetNames.length){sheetNames.forEach(function(name){var count=(sheets[name].rows||[]).length;box+=tile(false,"go2('projection',g('printProjectionNav'));selectProjectionSheet("+JSON.stringify(name)+")",esc(name),fmt(count),'worksheet records',["#f0fdf4","#bbf7d0","#15803d"])})}
+ else box+='<div class="m">No Print Projection workbook loaded yet.</div>';
+ box+='</div><button type="button" style="margin-top:10px" onclick="go2(\'projection\',g(\'printProjectionNav\'))">Open Print Projection</button></div>';
+ box+='</div></section>';
+ var old=g("allFilePipelines");if(old)old.remove();
+ host.insertAdjacentHTML("beforeend",box);
+}
 
 var DS=[["pending","Pending","#eab308"],["approved","Approved","#2563eb"],["in transit","In transit","#f97316"],["cn pending","CN pending","#7c3aed"],["cn uploaded","CN uploaded","#16a34a"],["cancelled","Cancelled","#6b7280"],["rejected","Rejected","#dc2626"]];
 var DW=[["No SR record","No SR yet","#94a3b8"],["Under Scanning","Under scanning","#eab308"],["Under Segregation","Under segregation","#7c3aed"],["Complete","Complete","#16a34a"]];
