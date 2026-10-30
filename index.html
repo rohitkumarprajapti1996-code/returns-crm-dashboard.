@@ -108,8 +108,26 @@ dialog{border:1px solid var(--bd);border-radius:14px;background:var(--cd);color:
 <a class="nv" href="#" onclick="go2('tbl',this);return false">↩ &nbsp;All returns</a>
 <a class="nv" href="#" onclick="go2('saleReturns',this);return false">↩ &nbsp;Sale Return file</a>
 <a class="nv" href="#" onclick="go2('printing',this);return false">▤ &nbsp;Printing</a>
+<a class="nv" href="#" onclick="go2('projection',this);return false">▦ &nbsp;Print Projection</a>
 <div class="sf" id="who"><div>Signed in as <b>preview</b></div><div id="updtxt"></div><div style="margin-top:6px"><span id="adm"><a href="#" onclick="upOpen();return false">Upload data</a> · </span><a href="#" onclick="signOut();return false">Sign out</a></div></div></nav>
 <div class="w"><div class="top"><div class="eyebrow">Operations overview</div><h1>Returns performance</h1><div class="m" id="sub"></div></div>
+<div id="projectionPanel" class="sh" style="margin-top:12px" hidden>
+<div class="eyebrow">Printing projection workbook</div><h2 style="margin:4px 0">Print Projection Data — Aug 2026</h2>
+<p class="m">Import all five worksheets from the Excel workbook. Data is saved to the shared CRM database so approved CRM users can view it on other devices.</p>
+<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin:14px 0">
+<label style="min-width:250px;flex:1">Excel workbook (.xlsx)<br><input id="projectionFile" type="file" accept=".xlsx,.xls" style="width:100%"></label>
+<button type="button" id="projectionUploadBtn" onclick="uploadProjectionWorkbook()">Import workbook to CRM</button>
+<button type="button" onclick="loadProjectionWorkbook()">Refresh saved data</button>
+<span class="m" id="projectionStatus" aria-live="polite"></span>
+</div>
+<div class="chips" id="projectionKpis"></div>
+<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0">
+<label>Worksheet<br><select id="projectionSheet" onchange="renderProjectionSheet()"><option value="">Import workbook first</option></select></label>
+<input id="projectionSearch" placeholder="Search SKU, title, ERP code, grade…" oninput="renderProjectionSheet()" style="flex:1;min-width:220px">
+<button type="button" onclick="downloadProjectionSheet()">Download visible worksheet CSV</button>
+</div>
+<div class="tw"><table><thead id="projectionHead"></thead><tbody id="projectionRows"><tr><td class="m">Choose a workbook and import it to display the worksheet data.</td></tr></tbody></table></div>
+<p class="m" id="projectionMeta"></p></div>
 <div id="printingPanel" class="sh" style="margin-top:12px" hidden><div class="eyebrow">Printing &amp; inbound tracking</div><h2 style="margin:4px 0">Printing dashboard</h2><p class="m">Upload both Excel/CSV files directly. No office account or Google connection is required.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:14px 0"><div><label for="printingOrderFile">1. Printing / book-order file</label><input id="printingOrderFile" type="file" accept=".xlsx,.xls,.csv" style="width:100%"></div><div><label for="printingWarehouseFile">2. Warehouse received file</label><input id="printingWarehouseFile" type="file" accept=".xlsx,.xls,.csv" style="width:100%"></div></div><button type="button" onclick="uploadPrintingFiles()">Upload both files and update dashboard</button> <button type="button" onclick="renderPrintingRows()">Refresh dashboard</button> <button type="button" onclick="downloadPrintingSummary()">Download summary CSV</button><span class="m" id="printingStatus" aria-live="polite"></span><div class="chips" id="printingKpis"></div><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 0"><input id="printingSearch" placeholder="Search title, ISBN, SKU or grade…" style="flex:1;min-width:220px" oninput="renderPrintingRows()"><select id="printingFilter" onchange="renderPrintingRows()"><option value="all">All books</option><option value="pending">Pending printing</option><option value="inbound">Awaiting warehouse receipt</option><option value="complete">Received</option></select></div><div class="tw"><table><thead><tr><th>Book / title</th><th>ISBN / SKU</th><th>Grade</th><th>Order qty</th><th>Printed qty</th><th>Received qty</th><th>Pending printing</th><th>Awaiting receipt</th><th>Status</th></tr></thead><tbody id="printingRows"><tr><td colspan="9" class="m">Upload both files to see the dashboard.</td></tr></tbody></table></div><p class="m">Files are processed in this browser. The previous successful dashboard remains available if a new upload fails.</p></div>
 <div id="saleReturnsPanel" class="sh" style="margin-top:12px" hidden>
 <div class="eyebrow">Source file view</div><h2 style="margin:4px 0">Sale Return file</h2>
@@ -163,7 +181,7 @@ dialog{border:1px solid var(--bd);border-radius:14px;background:var(--cd);color:
 var TOK="";
 var D=[];
 var U=[{"sr":"SR-NT/00670/2026-2027","auth":"2675","cust":"Punjab Traders ","status":"Under Scanning"},{"sr":"SR-NT/00616/2026-2027","auth":"107","cust":"A K JANGHEL","status":"Under Scanning"},{"sr":"SR-NT/00604/2026-2027","auth":"314791094","cust":"A K JANGHEL","status":"Under Scanning"},{"sr":"SR-NT/00211/2026-2027","auth":"6873352","cust":"YADWINDER BUTTAR","status":"Under Segregation"},{"sr":"SR-NT/00210/2026-2027","auth":"1108781731","cust":"SUMANT KUMAR","status":"Under Segregation"}];
-function go2(id,el){var e=g(id),w=document.querySelector(".w"),p=g("printingPanel"),srp=g("saleReturnsPanel");if(w&&(p||srp)){for(var i=0;i<w.children.length;i++){var c=w.children[i];if(!c.hasAttribute("data-print-view-saved")){c.setAttribute("data-print-view-saved","1");c.setAttribute("data-print-view-hidden",c.hidden?"1":"0");c.setAttribute("data-print-view-display",c.style.display||"")}if(id==="printing"||id==="saleReturns"){c.hidden=(c!==(id==="printing"?p:srp));if(c===(id==="printing"?p:srp))c.style.display="block"}else{c.hidden=c.getAttribute("data-print-view-hidden")==="1";c.style.display=c.getAttribute("data-print-view-display")||""}}}document.querySelectorAll(".nv").forEach(function(a){a.classList.remove("on")});if(el)el.classList.add("on");if(id==="printing"){if(typeof loadSavedPrintingData==="function")loadSavedPrintingData();if(typeof renderPrintingRows==="function")renderPrintingRows();if(p)p.scrollIntoView({behavior:"smooth",block:"start"})}else if(id==="saleReturns"){renderSaleReturns();if(srp)srp.scrollIntoView({behavior:"smooth",block:"start"})}else if(e)e.scrollIntoView({behavior:"smooth",block:"start"})}
+function go2(id,el){var e=g(id),w=document.querySelector(".w"),p=g("printingPanel"),srp=g("saleReturnsPanel"),prj=g("projectionPanel");if(w&&(p||srp||prj)){for(var i=0;i<w.children.length;i++){var c=w.children[i];if(!c.hasAttribute("data-print-view-saved")){c.setAttribute("data-print-view-saved","1");c.setAttribute("data-print-view-hidden",c.hidden?"1":"0");c.setAttribute("data-print-view-display",c.style.display||"")}if(id==="printing"||id==="saleReturns"||id==="projection"){c.hidden=(c!==(id==="printing"?p:id==="saleReturns"?srp:prj));if(c===(id==="printing"?p:id==="saleReturns"?srp:prj))c.style.display="block"}else{c.hidden=c.getAttribute("data-print-view-hidden")==="1";c.style.display=c.getAttribute("data-print-view-display")||""}}}document.querySelectorAll(".nv").forEach(function(a){a.classList.remove("on")});if(el)el.classList.add("on");if(id==="printing"){if(typeof loadSavedPrintingData==="function")loadSavedPrintingData();if(typeof renderPrintingRows==="function")renderPrintingRows();if(p)p.scrollIntoView({behavior:"smooth",block:"start"})}else if(id==="saleReturns"){renderSaleReturns();if(srp)srp.scrollIntoView({behavior:"smooth",block:"start"})}else if(id==="projection"){loadProjectionWorkbook();if(prj)prj.scrollIntoView({behavior:"smooth",block:"start"})}else if(e)e.scrollIntoView({behavior:"smooth",block:"start"})}
 
 function saleReturnRowsFiltered(){var q=(g("saleReturnSearch")&&g("saleReturnSearch").value||"").trim().toLowerCase(),st=g("saleReturnStatus")&&g("saleReturnStatus").value||"";return (Array.isArray(WHSNAP)?WHSNAP:[]).filter(function(r){if(st&&String(r.Status||"")!==st)return false;if(!q)return true;return Object.keys(r).some(function(k){return String(r[k]===null||r[k]===undefined?"":r[k]).toLowerCase().indexOf(q)>=0})})}
 function renderSaleReturns(){var rows=saleReturnRowsFiltered(),head=g("saleReturnHead"),body=g("saleReturnRows"),info=g("saleReturnInfo"),sel=g("saleReturnStatus");if(!head||!body)return;var all=Array.isArray(WHSNAP)?WHSNAP:[],cols=all.length?Object.keys(all[0]):[];if(sel){var current=sel.value,vals=Array.from(new Set(all.map(function(r){return String(r.Status||"").trim()}).filter(Boolean))).sort();sel.innerHTML='<option value="">All statuses</option>'+vals.map(function(v){return '<option value="'+esc(v)+'">'+esc(v)+'</option>'}).join("");sel.value=vals.indexOf(current)>=0?current:""}head.innerHTML='<tr>'+cols.map(function(c){return '<th>'+esc(c)+'</th>'}).join("")+'</tr>';body.innerHTML=rows.length?rows.map(function(r){return '<tr>'+cols.map(function(c){return '<td>'+esc(r[c]===undefined||r[c]===null?"":r[c])+'</td>'}).join("")+'</tr>'}).join(""):'<tr><td colspan="'+Math.max(cols.length,1)+'" class="m">No Sale Return records match the current search/filter. Upload the SaleReturn CSV using Import data.</td></tr>';if(info)info.textContent=rows.length.toLocaleString()+" of "+all.length.toLocaleString()+" records"}
@@ -550,6 +568,76 @@ async function loadSharedSnapshots(){
  MOVES=[];g("updbar").innerHTML="🕒 <b>Shared data last updated:</b> "+new Date(result.data.updated_at).toLocaleString()+" · "+D.length.toLocaleString()+" returns · "+WHSNAP.length.toLocaleString()+" warehouse rows";
  FS={};MSD.forEach(function(m){FS[m[0]]=[]});pg=0;rn();renderMovements();return true
 }
-function activateLocalUser(email){var norm=String(email||"").trim().toLowerCase();setCrmPermissions(norm);var screen=g("loginScreen");if(screen)screen.hidden=true;var who=g("who");if(who){who.hidden=false;who.innerHTML='<div class="m">Signed in as</div><b>'+esc(norm)+'</b><br>'+(ADM?'<a href="#" onclick="upOpen();return false">Upload data</a> · ':'<span class="m">Read-only access</span> · ')+'<a href="#" onclick="signOut();return false">Sign out</a>'}var logo=document.querySelector(".login-logo-img"),mark=document.querySelector(".dashboard-pw-logo");if(logo&&mark){mark.innerHTML="";var img=document.createElement("img");img.src=logo.src;img.alt="PW logo";img.style.cssText="width:100%;height:100%;object-fit:contain;display:block";mark.appendChild(img)}document.body.classList.add("crm-authenticated");loadSharedSnapshots().then(function(ok){if(!ok)console.info("No shared snapshot yet; using this browser's last saved data.")}).catch(function(e){console.warn("Shared snapshot load failed",e)})}
+function activateLocalUser(email){var norm=String(email||"").trim().toLowerCase();setCrmPermissions(norm);var screen=g("loginScreen");if(screen)screen.hidden=true;var who=g("who");if(who){who.hidden=false;who.innerHTML='<div class="m">Signed in as</div><b>'+esc(norm)+'</b><br>'+(ADM?'<a href="#" onclick="upOpen();return false">Upload data</a> · ':'<span class="m">Read-only access</span> · ')+'<a href="#" onclick="signOut();return false">Sign out</a>'}var logo=document.querySelector(".login-logo-img"),mark=document.querySelector(".dashboard-pw-logo");if(logo&&mark){mark.innerHTML="";var img=document.createElement("img");img.src=logo.src;img.alt="PW logo";img.style.cssText="width:100%;height:100%;object-fit:contain;display:block";mark.appendChild(img)}document.body.classList.add("crm-authenticated");loadSharedSnapshots().then(function(ok){if(!ok)console.info("No shared snapshot yet; using this browser's last saved data.");loadProjectionWorkbook()}).catch(function(e){console.warn("Shared snapshot load failed",e);loadProjectionWorkbook()})}
 function signOut(){if(authClient){authClient.auth.signOut().finally(function(){location.reload()})}else location.reload()}
-(function(){if(!window.supabase){g("loginError").textContent="Secure sign-in library could not load.";return}authClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);setCrmPermissions("");authClient.auth.getSession().then(async function(r){var u=r.data&&r.data.session&&r.data.session.user;if(!u)return;var q=await authClient.from("crm_access_requests").select("status").eq("user_id",u.id).maybeSingle();if(q.error){setLoginMessage("Could not check access status: "+q.error.message);return}if(q.data&&q.data.status==="approved"){activateLocalUser(u.email);return}if(q.data&&q.data.status==="rejected"){setLoginMessage("Access to this CRM is disabled for this account. Contact the administrator.");return}setLoginMessage("Your email is verified, but CRM access is pending administrator approval.")}).catch(function(e){setLoginMessage("Could not restore your session: "+(e&&e.message?e.message:"network error"))})})();</script></body></html>
+(function(){if(!window.supabase){g("loginError").textContent="Secure sign-in library could not load.";return}authClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);setCrmPermissions("");authClient.auth.getSession().then(async function(r){var u=r.data&&r.data.session&&r.data.session.user;if(!u)return;var q=await authClient.from("crm_access_requests").select("status").eq("user_id",u.id).maybeSingle();if(q.error){setLoginMessage("Could not check access status: "+q.error.message);return}if(q.data&&q.data.status==="approved"){activateLocalUser(u.email);return}if(q.data&&q.data.status==="rejected"){setLoginMessage("Access to this CRM is disabled for this account. Contact the administrator.");return}setLoginMessage("Your email is verified, but CRM access is pending administrator approval.")}).catch(function(e){setLoginMessage("Could not restore your session: "+(e&&e.message?e.message:"network error"))})})();
+/* PRINT PROJECTION WORKBOOK: multi-sheet import, shared Supabase persistence */
+var PRINT_PROJECTION_DATA={},PRINT_PROJECTION_NAME="",PRINT_PROJECTION_UPDATED="";
+function projectionEsc(v){return typeof esc==="function"?esc(String(v==null?"":v)):String(v==null?"":v).replace(/[&<>"']/g,function(c){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]})}
+function projectionStatus(t){var e=g("projectionStatus");if(e)e.textContent=t}
+async function uploadProjectionWorkbook(){
+ var file=g("projectionFile")&&g("projectionFile").files[0],btn=g("projectionUploadBtn");
+ if(!file){projectionStatus("Choose the Print Projection Excel workbook first.");return}
+ if(!ADM||!authClient){projectionStatus("Only the approved CRM administrator can import workbook data.");return}
+ if(!window.XLSX){projectionStatus("Excel reader could not load. Refresh and try again.");return}
+ if(btn)btn.disabled=true;projectionStatus("Reading workbook and preparing worksheets…");
+ try{
+  var buf=await file.arrayBuffer(),wb=XLSX.read(buf,{type:"array",cellDates:false}),all={},total=0;
+  wb.SheetNames.forEach(function(name){
+   var matrix=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:"",raw:false,blankrows:false});
+   while(matrix.length&&matrix[matrix.length-1].every(function(v){return String(v==null?"":v).trim()===""}))matrix.pop();
+   var headerIndex=0;
+   if(name.toLowerCase()==="master data"){var found=matrix.findIndex(function(row){return row.filter(function(v){return String(v==null?"":v).trim()!==""}).length>=5});headerIndex=Math.max(0,found)}
+   else {var found2=matrix.findIndex(function(row){return row.filter(function(v){return String(v==null?"":v).trim()!==""}).length>=3});headerIndex=Math.max(0,found2)}
+   var headers=(matrix[headerIndex]||[]).map(function(v,i){return String(v==null?"":v).trim()||("Column "+(i+1))});
+   var seen={};headers=headers.map(function(h){var k=h;seen[k]=(seen[k]||0)+1;return seen[k]>1?k+" ("+seen[k]+")":k});
+   var rows=matrix.slice(headerIndex+1).filter(function(row){return row.some(function(v){return String(v==null?"":v).trim()!==""})}).map(function(row){var o={};headers.forEach(function(h,i){o[h]=row[i]===undefined?"":row[i]});return o});
+   all[name]={headers:headers,rows:rows};total+=rows.length;
+  });
+  if(!Object.keys(all).length||!total)throw new Error("No worksheet data was found in this workbook.");
+  projectionStatus("Saving "+Object.keys(all).length+" worksheets to shared CRM…");
+  var result=await authClient.from("crm_print_projection_workbooks").upsert({id:1,workbook_name:file.name,sheets:all,updated_by:CRM_CURRENT_EMAIL||"",updated_at:new Date().toISOString()},{onConflict:"id"});
+  if(result.error)throw result.error;
+  PRINT_PROJECTION_DATA=all;PRINT_PROJECTION_NAME=file.name;PRINT_PROJECTION_UPDATED=new Date().toISOString();
+  renderProjectionWorkbook();projectionStatus("Imported successfully: "+Object.keys(all).length+" worksheets, "+total.toLocaleString()+" data rows. Saved to the shared CRM database.");
+ }catch(e){console.error("Print Projection import failed",e);projectionStatus("Import failed; existing saved workbook was kept. "+(e&&e.message?e.message:"Please check the file and try again."))}
+ finally{if(btn)btn.disabled=false}
+}
+async function loadProjectionWorkbook(){
+ if(!authClient||!g("projectionStatus"))return;
+ try{
+  var res=await authClient.from("crm_print_projection_workbooks").select("workbook_name,sheets,updated_by,updated_at").eq("id",1).maybeSingle();
+  if(res.error){projectionStatus("Could not load shared workbook: "+res.error.message);return}
+  if(res.data&&res.data.sheets){PRINT_PROJECTION_DATA=res.data.sheets||{};PRINT_PROJECTION_NAME=res.data.workbook_name||"";PRINT_PROJECTION_UPDATED=res.data.updated_at||"";renderProjectionWorkbook();projectionStatus("Loaded shared workbook: "+PRINT_PROJECTION_NAME)}
+  else if(!Object.keys(PRINT_PROJECTION_DATA).length){projectionStatus("No Print Projection workbook has been imported yet. Choose the Excel file and click Import.")}
+ }catch(e){projectionStatus("Could not load workbook: "+(e.message||"connection error"))}
+}
+function renderProjectionWorkbook(){
+ var sel=g("projectionSheet");if(!sel)return;var names=Object.keys(PRINT_PROJECTION_DATA);
+ var prior=sel.value;sel.innerHTML=names.map(function(n){return'<option value="'+projectionEsc(n)+'">'+projectionEsc(n)+'</option>'}).join("");
+ if(names.indexOf(prior)>=0)sel.value=prior;else if(names.length)sel.value=names[0];
+ var total=names.reduce(function(n,k){return n+((PRINT_PROJECTION_DATA[k].rows||[]).length)},0);
+ if(g("projectionKpis"))g("projectionKpis").innerHTML='<div class="chip"><b>'+names.length+'</b><span>Worksheets</span></div><div class="chip"><b>'+total.toLocaleString()+'</b><span>Data rows</span></div><div class="chip"><b>'+projectionEsc(PRINT_PROJECTION_NAME||"—")+'</b><span>Workbook</span></div>';
+ if(g("projectionMeta"))g("projectionMeta").textContent="Last saved: "+(PRINT_PROJECTION_UPDATED?new Date(PRINT_PROJECTION_UPDATED).toLocaleString():"not available")+". Search is applied to all columns in the selected worksheet.";
+ renderProjectionSheet();
+}
+function projectionFilteredRows(){
+ var name=g("projectionSheet")&&g("projectionSheet").value,sh=PRINT_PROJECTION_DATA[name];if(!sh)return [];
+ var q=(g("projectionSearch")&&g("projectionSearch").value||"").trim().toLowerCase();
+ return (sh.rows||[]).filter(function(row){return !q||(sh.headers||[]).some(function(h){return String(row[h]==null?"":row[h]).toLowerCase().indexOf(q)>=0})});
+}
+function renderProjectionSheet(){
+ var name=g("projectionSheet")&&g("projectionSheet").value,sh=PRINT_PROJECTION_DATA[name],head=g("projectionHead"),body=g("projectionRows");
+ if(!sh||!head||!body){return}
+ var rows=projectionFilteredRows(),headers=sh.headers||[];
+ head.innerHTML="<tr>"+headers.map(function(h){return"<th>"+projectionEsc(h)+"</th>"}).join("")+"</tr>";
+ body.innerHTML=rows.length?rows.slice(0,500).map(function(row){return"<tr>"+headers.map(function(h){return"<td>"+projectionEsc(row[h])+"</td>"}).join("")+"</tr>"}).join(""):'<tr><td colspan="'+Math.max(1,headers.length)+'" class="m">No matching rows in this worksheet.</td></tr>';
+ if(g("projectionMeta"))g("projectionMeta").textContent=(sh.rows||[]).length.toLocaleString()+" rows in "+name+" · "+rows.length.toLocaleString()+" matching"+(rows.length>500?" · Showing first 500 matches; use search to narrow results.":"")+". Last saved: "+(PRINT_PROJECTION_UPDATED?new Date(PRINT_PROJECTION_UPDATED).toLocaleString():"not available")+".";
+}
+function downloadProjectionSheet(){
+ var name=g("projectionSheet")&&g("projectionSheet").value,sh=PRINT_PROJECTION_DATA[name];if(!sh){projectionStatus("No worksheet loaded.");return}
+ var headers=sh.headers||[],rows=projectionFilteredRows(),csv=[headers].concat(rows.map(function(r){return headers.map(function(h){return r[h]==null?"":r[h]})})).map(function(row){return row.map(function(v){return'"'+String(v==null?"":v).replace(/"/g,'""')+'"'}).join(",")}).join("\r\n");
+ var url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"})),a=document.createElement("a");a.href=url;a.download=(name||"Print_Projection").replace(/[^a-z0-9_-]+/gi,"_")+".csv";a.click();setTimeout(function(){URL.revokeObjectURL(url)},1000);
+}
+
+</script></body></html>
