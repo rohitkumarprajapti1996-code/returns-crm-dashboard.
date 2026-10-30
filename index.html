@@ -146,7 +146,13 @@ td{font-size:10px!important}
 <div id="projectionPanel" class="projection-page" hidden>
 <div class="projection-titlebar"><div><div class="projection-heading"><span class="projection-book">▮▮</span><div><h2>Print Projection</h2><p>Upload and view Print Projection Data from Excel workbook</p></div></div></div><div class="projection-actions"><button type="button" class="projection-primary" onclick="document.getElementById('projectionFile').click()">⇧ &nbsp; Upload Excel File</button><button type="button" class="projection-secondary" onclick="downloadProjectionSheet()">⇩ &nbsp; Export CSV</button></div></div>
 <div class="projection-kpis" id="projectionKpis"><div class="projection-kpi"><span class="pk-icon blue">▤</span><div><small>Total Records</small><b id="projectionTotal">0</b><small>Across all sheets</small></div></div><div class="projection-kpi"><span class="pk-icon indigo">▣</span><div><small>Master Data</small><b id="projectionCountMaster">0</b><small>Records</small></div></div><div class="projection-kpi"><span class="pk-icon amber">⬡</span><div><small>Lot_1</small><b id="projectionCountLot1">0</b><small>Records</small></div></div><div class="projection-kpi"><span class="pk-icon amber">⬡</span><div><small>Lot_2</small><b id="projectionCountLot2">0</b><small>Records</small></div></div><div class="projection-kpi"><span class="pk-icon sky">⬡</span><div><small>Lot_3</small><b id="projectionCountLot3">0</b><small>Records</small></div></div><div class="projection-kpi"><span class="pk-icon green">▦</span><div><small>Blooming Buds</small><b id="projectionCountBloom">0</b><small>Records</small></div></div></div>
-<div class="projection-upload-card"><div class="projection-upload-head"><b>Upload Print Projection Excel File</b><small>Upload the latest workbook (e.g. Print Projection Data_Aug 26.xlsx) to update all sheets in the CRM.</small></div><label class="projection-dropzone" for="projectionFile"><span class="projection-cloud">☁</span><b>Drag and drop your Excel file here</b><small>or click to browse</small><input id="projectionFile" type="file" accept=".xlsx,.xls" onchange="projectionFilePicked()"></label><div class="projection-upload-foot"><span id="projectionStatus" aria-live="polite">Supported format: .xlsx (Excel workbook with multiple sheets).</span><button type="button" id="projectionUploadBtn" class="projection-primary" onclick="uploadProjectionWorkbook()">⇧ &nbsp; Import Workbook to CRM</button></div></div>
+<div class="projection-kpis projection-ops-kpis" id="projectionOpsKpis">
+<div class="projection-kpi"><span class="pk-icon blue">PO</span><div><small>PO Created</small><b id="projectionPOCreated">0</b><small>Titles with PO status</small></div></div>
+<div class="projection-kpi"><span class="pk-icon indigo">▣</span><div><small>Titles Inwarded</small><b id="projectionTitlesInward">0</b><small>Titles with inward qty</small></div></div>
+<div class="projection-kpi"><span class="pk-icon green">↓</span><div><small>Books Inwarded</small><b id="projectionBooksInward">0</b><small>Total inward quantity</small></div></div>
+<div class="projection-kpi"><span class="pk-icon amber">…</span><div><small>Books Pending Inward</small><b id="projectionBooksPending">0</b><small>Planned minus inwarded</small></div></div>
+</div>
+<div class="projection-upload-card" style="display:none"><span id="projectionStatus" aria-live="polite">Choose an Excel workbook.</span><button type="button" id="projectionUploadBtn">Import</button></div>
 <select id="projectionSheet" hidden aria-hidden="true" onchange="renderProjectionSheet()"><option value="">Import workbook first</option></select>
 <div class="projection-tabs" id="projectionTabs"><span class="m" style="padding:8px 10px">Import the Excel workbook to load worksheet tabs.</span></div>
 <div class="projection-filterbar"><input id="projectionSearch" placeholder="⌕  Search by SKU, Title, Grade, Subject…" oninput="renderProjectionSheet()"><select id="projectionGrade" onchange="renderProjectionSheet()"><option value="">All Grades</option></select><select id="projectionSubject" onchange="renderProjectionSheet()"><option value="">All Subjects</option></select><select id="projectionPOStatus" onchange="renderProjectionSheet()"><option value="">All PO Status</option></select><button type="button" onclick="clearProjectionFilters()">Clear Filters</button></div>
@@ -715,7 +721,7 @@ async function loadProjectionWorkbook(){
   else if(!Object.keys(PRINT_PROJECTION_DATA).length){projectionStatus("No Print Projection workbook has been imported yet. Choose the Excel file and click Import.")}
  }catch(e){projectionStatus("Could not load workbook: "+(e.message||"connection error"))}
 }
-function projectionFilePicked(){var f=g("projectionFile")&&g("projectionFile").files[0];if(f)projectionStatus("Selected: "+f.name+" · Click Import Workbook to CRM to save it for all approved users.");}
+function projectionFilePicked(){var f=g("projectionFile")&&g("projectionFile").files[0];if(f){projectionStatus("Selected: "+f.name+" · Importing workbook…");uploadProjectionWorkbook()}}
 function clearProjectionFilters(){["projectionSearch","projectionGrade","projectionSubject","projectionPOStatus"].forEach(function(id){var e=g(id);if(e)e.value=""});renderProjectionSheet()}
 function renderProjectionWorkbook(){
  var sel=g("projectionSheet"),names=Object.keys(PRINT_PROJECTION_DATA),prior=sel&&sel.value;
@@ -723,9 +729,30 @@ function renderProjectionWorkbook(){
  var total=0;names.forEach(function(n){total+=(PRINT_PROJECTION_DATA[n].rows||[]).length});
  var kpi=g("projectionKpis");
  if(kpi){var counts={"Master Data":"projectionCountMaster","Lot_1":"projectionCountLot1","Lot_2":"projectionCountLot2","Lot_3":"projectionCountLot3","Blooming Buds":"projectionCountBloom"};names.forEach(function(n){var el=g(counts[n]);if(el)el.textContent=(PRINT_PROJECTION_DATA[n].rows||[]).length.toLocaleString()});var t=g("projectionTotal");if(t)t.textContent=total.toLocaleString()}
- renderProjectionTabs();renderProjectionFilters();renderProjectionSheet();
+ renderProjectionTabs();renderProjectionFilters();renderProjectionOperationalKpis();renderProjectionSheet();
 }
-function renderProjectionTabs(){var box=g("projectionTabs");if(!box)return;var names=Object.keys(PRINT_PROJECTION_DATA);if(!names.length)return;var current=g("projectionSheet")&&g("projectionSheet").value;box.innerHTML=names.map(function(n){var count=(PRINT_PROJECTION_DATA[n].rows||[]).length;return'<button type="button" class="'+(n===current?'active':'')+'" onclick="selectProjectionSheet('+JSON.stringify(n).replace(/</g,'\\u003c')+')">'+projectionEsc(n)+' ('+count.toLocaleString()+')</button>'}).join("")}
+function renderProjectionOperationalKpis(){
+ var sh=PRINT_PROJECTION_DATA["Master Data"]||PRINT_PROJECTION_DATA[Object.keys(PRINT_PROJECTION_DATA)[0]];
+ var rows=sh&&sh.rows||[];
+ function findKey(patterns){var hs=sh&&sh.headers||[];return hs.find(function(h){return patterns.test(String(h))})||""}
+ var poKey=findKey(/po\s*status|purchase\s*order\s*status/i);
+ var titleKey=findKey(/sku\s*\/\s*title|title\s*name|name\s*2/i);
+ var inwardKey=findKey(/inward\s*qty|inwarded\s*qty|received\s*qty/i);
+ var lotKeys=(sh&&sh.headers||[]).filter(function(h){return /print\s*qty|lot\s*\d+\s*print/i.test(String(h))});
+ function num(v){var n=Number(String(v==null?"":v).replace(/[,\s]/g,""));return Number.isFinite(n)?n:0}
+ var po=0,titles={},inwardTitles={},inward=0,pending=0;
+ rows.forEach(function(r){
+  var title=String((titleKey&&r[titleKey])||r["SKU Code"]||"").trim();
+  if(title&&poKey&&String(r[poKey]||"").trim()&&!/^(pending|not raised|not created|n\/a|na|-)$/i.test(String(r[poKey]).trim()))po++;
+  if(title)titles[title]=true;
+  var got=num(inwardKey&&r[inwardKey]);inward+=got;if(title&&got>0)inwardTitles[title]=true;
+  var planned=lotKeys.reduce(function(sum,k){return sum+num(r[k])},0);
+  pending+=Math.max(0,planned-got);
+ });
+ var set=function(id,v){var e=g(id);if(e)e.textContent=Number(v||0).toLocaleString()};
+ set("projectionPOCreated",po);set("projectionTitlesInward",Object.keys(inwardTitles).length);set("projectionBooksInward",inward);set("projectionBooksPending",pending);
+}
+function renderProjectionTabs(){var box=g("projectionTabs");if(!box)return;var names=Object.keys(PRINT_PROJECTION_DATA);if(!names.length)return;var current=g("projectionSheet")&&g("projectionSheet").value;box.innerHTML=names.map(function(n){var count=(PRINT_PROJECTION_DATA[n].rows||[]).length;return'<button type="button" data-sheet="'+projectionEsc(n)+'" class="'+(n===current?'active':'')+'" onclick="selectProjectionSheet(this.dataset.sheet)">'+projectionEsc(n)+' ('+count.toLocaleString()+')</button>'}).join("")}
 function selectProjectionSheet(name){var sel=g("projectionSheet");if(sel)sel.value=name;renderProjectionTabs();renderProjectionFilters();renderProjectionSheet()}
 function renderProjectionFilters(){var sh=PRINT_PROJECTION_DATA[g("projectionSheet")&&g("projectionSheet").value];if(!sh)return;var hs=sh.headers||[],rows=sh.rows||[];function fill(id,patterns,label){var e=g(id);if(!e)return;var old=e.value,h=hs.find(function(x){return patterns.test(x)});var vals=[];if(h)rows.forEach(function(r){var v=String(r[h]||"").trim();if(v&&vals.indexOf(v)<0)vals.push(v)});vals.sort();e.innerHTML='<option value="">'+label+'</option>'+vals.map(function(v){return'<option value="'+projectionEsc(v)+'">'+projectionEsc(v)+'</option>'}).join("");if(vals.indexOf(old)>=0)e.value=old}fill("projectionGrade",/grade/i,"All Grades");fill("projectionSubject",/subject/i,"All Subjects");fill("projectionPOStatus",/po\s*status/i,"All PO Status")}
 function renderProjectionWorkbookLegacy(){}
