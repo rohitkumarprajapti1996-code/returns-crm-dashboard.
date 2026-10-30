@@ -587,8 +587,50 @@ function renderPrintingRows(){var body=g("printingRows");if(!body)return;var q=(
 function setupViews(){var tbl=g("tbl"),dlg=g("upd");if(tbl&&!g("returnsView")){var wrap=document.createElement("div");wrap.id="returnsView";tbl.parentNode.insertBefore(wrap,tbl);var node=tbl;while(node&&node!==dlg){var next=node.nextSibling;wrap.appendChild(node);node=next}}}
 function setPair(id,show){var e=g(id);if(!e)return;e.hidden=!show;if(e.nextElementSibling)e.nextElementSibling.hidden=!show}
 function applyView(){setupViews();var view=CURRENT_VIEW||"pipe",p=g("pipe");if(p)[].forEach.call(p.children,function(node){var overview=node.classList.contains("ppw")||node.classList.contains("pps")||node.classList.contains("ppd");node.hidden=view!=="pipe"||node.classList.contains("ppd")});setPair("qty",view==="qty");setPair("dq",view==="dq");var mv=g("movementPanel"),mp=g("submissionAgainstPanel"),rv=g("returnsView"),pr=g("printingPanel");if(mv)mv.hidden=view!=="movements";if(mp)mp.hidden=view!=="mapping";if(rv)rv.hidden=view!=="tbl";if(pr)pr.hidden=view!=="printing";if(view==="movements")renderMovements();if(view==="mapping")renderSubmissionAgainst();if(view==="printing")refreshPrintingSheets()}
-function go2(id,el){CURRENT_VIEW=id==="movements"?"movements":id==="mapping"?"mapping":id;applyView();[].forEach.call(document.querySelectorAll(".nv"),function(a){a.classList.remove("on")});if(el)el.classList.add("on");var target=id==="movements"?g("movementPanel"):id==="mapping"?g("submissionAgainstPanel"):id==="tbl"?g("returnsView"):id==="qty"?g("qty"):id==="dq"?g("dq"):g("pipe");if(target)target.scrollIntoView({behavior:"smooth",block:"start"})}
-
+function go2(id,el){
+ var w=document.querySelector(".w"),p=g("printingPanel"),srp=g("saleReturnsPanel"),prj=g("projectionPanel");
+ var special=(id==="printing"||id==="saleReturns"||id==="projection");
+ if(special){
+  if(w){Array.prototype.forEach.call(w.children,function(c){
+   if(!c.hasAttribute("data-special-view-saved")){
+    c.setAttribute("data-special-view-saved","1");
+    c.setAttribute("data-special-view-hidden",c.hidden?"1":"0");
+    c.setAttribute("data-special-view-display",c.style.display||"");
+   }
+   var target=id==="printing"?p:(id==="saleReturns"?srp:prj);
+   c.hidden=(c!==target);
+   c.style.display=(c===target)?"block":"none";
+  });}
+ }else{
+  if(w){Array.prototype.forEach.call(w.children,function(c){
+   if(c.hasAttribute("data-special-view-saved")){
+    c.hidden=c.getAttribute("data-special-view-hidden")==="1";
+    c.style.display=c.getAttribute("data-special-view-display")||"";
+   }
+  });}
+  CURRENT_VIEW=id==="movements"?"movements":id==="mapping"?"mapping":id;
+  applyView();
+ }
+ document.querySelectorAll(".nv").forEach(function(a){a.classList.remove("on")});
+ if(el)el.classList.add("on");
+ if(id==="printing"){
+  if(typeof loadSavedPrintingData==="function")loadSavedPrintingData();
+  if(typeof renderPrintingRows==="function")renderPrintingRows();
+  if(p)p.scrollIntoView({behavior:"smooth",block:"start"});
+ }else if(id==="saleReturns"){
+  if(typeof renderSaleReturns==="function")renderSaleReturns();
+  if(srp)srp.scrollIntoView({behavior:"smooth",block:"start"});
+ }else if(id==="projection"){
+  if(prj){prj.hidden=false;prj.style.display="block";prj.scrollIntoView({behavior:"smooth",block:"start"});}
+  if(typeof loadProjectionWorkbook==="function"){
+   try{var result=loadProjectionWorkbook();if(result&&typeof result.catch==="function")result.catch(function(err){projectionStatus("Could not load saved workbook: "+(err&&err.message||err));});}
+   catch(err){projectionStatus("Could not load saved workbook: "+(err&&err.message||err));}
+  }
+ }else{
+  var target=id==="movements"?g("movementPanel"):id==="mapping"?g("submissionAgainstPanel"):id==="tbl"?g("returnsView"):id==="qty"?g("qty"):id==="dq"?g("dq"):g("pipe");
+  if(target)target.scrollIntoView({behavior:"smooth",block:"start"});
+ }
+}
 
 function mvFiltered(){var q=(g("movementSearch").value||"").toLowerCase(),t=g("movementType").value;return MOVES.filter(function(r){return(!t||r.type===t)&&(!q||[r.source,r.type,r.sr,r.submission,r.old,r.now,r.fields,r.warehouse,r.customer].join(" ").toLowerCase().indexOf(q)>=0)})}
 function renderMovements(){var rows=mvFiltered(),counts={},packets={},sources={};MOVES.forEach(function(r){counts[r.type]=(counts[r.type]||0)+1;packets[r.type]=(packets[r.type]||0)+r.packets;sources[r.source]=(sources[r.source]||0)+1});var cards=[["Field changes",counts.Changed||0,"records"],["New records",counts.New||0,"records"],["Missing records",counts.Missing||0,"records"]];Object.keys(sources).sort().forEach(function(k){cards.push([k,sources[k],"change records"])});g("movementSummary").innerHTML=cards.map(function(x){return'<div><b>'+x[1]+'</b><span class="m">'+esc(x[0])+' · '+x[2]+'</span></div>'}).join("");g("movementInfo").textContent=rows.length+" change records shown · "+MOVES.length+" total changes";g("movementRows").innerHTML=rows.map(function(r){return'<tr><td>'+esc(r.source||"AAJ RMS")+'</td><td>'+esc(r.type)+'</td><td><b>'+esc(r.sr||"—")+'</b></td><td>'+esc(r.submission||"—")+'</td><td>'+esc(r.old||"—")+'</td><td>'+esc(r.now||"—")+'</td><td class="tx" title="'+esc(r.fields||"—")+'">'+esc(r.fields||"—")+'</td><td class="r">'+Number(r.packets||0).toLocaleString()+'</td><td>'+esc(r.warehouse||"—")+'</td><td>'+esc(r.date||"—")+'</td></tr>'}).join("")||'<tr><td colspan="10" class="m">No changes match the current search or filter.</td></tr>'}
