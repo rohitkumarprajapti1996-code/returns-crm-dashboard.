@@ -429,7 +429,6 @@ h+=dashboardAllSources();
 var saleStatusCounts={"No SR yet":0,"Under Scanning":0,"Under Segregation":0,"Complete":0},saleRaw=Array.isArray(WHSNAP)?WHSNAP:[];
 saleRaw.forEach(function(r){var z=String(r.Status||r.status||"").trim().toLowerCase();if(z.indexOf("scan")>=0)saleStatusCounts["Under Scanning"]++;else if(z.indexOf("segreg")>=0)saleStatusCounts["Under Segregation"]++;else if(z==="complete"||z==="completed"||z==="done")saleStatusCounts["Complete"]++;else saleStatusCounts["No SR yet"]++});
 var saleColors={"No SR yet":"#4385f5","Under Scanning":"#f4b400","Under Segregation":"#7c3aed","Complete":"#10a65a"};
-var saleStages=Object.keys(saleStatusCounts).map(function(x){return st(x,saleStatusCounts[x],saleColors[x],"records")}).join("");
 h+='<section class="crm-shot-panel"><div class="crm-shot-heading">K8 Returns Pipeline</div><div class="crm-shot-sub">Return to Credit Note process</div><div class="crm-shot-flow five">';
 PS.forEach(function(x,i){var key=String(x[0]).toLowerCase(),c=cnt[key]||0,book=bk[key]||0;h+='<div class="crm-shot-flow-item" style="--flow-color:'+x[2]+'"><span>'+esc(x[1])+'</span><b>'+L(c)+' <small>Returns</small></b><em>'+L(book)+' books</em></div>';if(i<PS.length-1)h+='<div class="crm-shot-arrow">›</div>'});
 h+='</div></section>';
