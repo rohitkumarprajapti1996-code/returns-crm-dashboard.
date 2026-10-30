@@ -1,5 +1,6 @@
 const fs = require("node:fs");
 const vm = require("node:vm");
+const acorn = require("acorn");
 
 const files = ["index.html", "docs/index.html"];
 let failed = false;
@@ -24,8 +25,21 @@ for (const file of files) {
     }
   });
 
+  const loginScript = inlineScripts.find((match) => /function\s+localLogin\s*\(/.test(match[2]));
+  let loginIsTopLevel = false;
+  if (loginScript) {
+    try {
+      const ast = acorn.parse(loginScript[2], { ecmaVersion: "latest", sourceType: "script" });
+      loginIsTopLevel = ast.body.some((node) => node.type === "FunctionDeclaration" && node.id && node.id.name === "localLogin");
+    } catch (error) {
+      console.error("FAIL: " + file + ": AST parse failed: " + error.message);
+      failed = true;
+    }
+  }
+
   const checks = [
     ["login handler exists", /function\s+localLogin\s*\(/.test(html)],
+    ["login handler is globally declared", loginIsTopLevel],
     ["Print Projection upload handler exists", /function\s+projectionFilePicked\s*\(/.test(html)],
     ["duplicate All File Pipelines section is absent", !html.includes("All File Pipelines")],
     ["original dashboard pipeline renderer exists", /function\s+pipe\s*\(/.test(html)],
