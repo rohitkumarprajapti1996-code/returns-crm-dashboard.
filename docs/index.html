@@ -444,6 +444,7 @@ var cards=[
 (m1+m2)?["iw","!","Stage and warehouse status disagree",m1+" return(s) are Approved but Complete in the warehouse; "+m2+" return(s) are CN uploaded but not Complete in the warehouse."]:["ig","✓","Stage and warehouse status agree","No return is ahead of or behind its warehouse status."]];
 if(uS.length||uW.length)cards.push(["iw","!","New status values found",(uS.length?"New stage: "+uS.join(", ")+". ":"")+(uW.length?"New warehouse status: "+uW.join(", ")+". ":"")+"They were added to the charts automatically."]);
 h+='<div id="dq" class="sh"><h2>Data checks</h2><div class="m">Calculated live from the uploaded files.</div></div><div class="ins">'+cards.map(function(c){return'<div class="in '+c[0]+'"><div class="sy">'+c[1]+'</div><div><h4>'+c[2]+'</h4><p>'+c[3]+'</p></div></div>'}).join("")+'</div>';
+h+=dashboardAllSources();
 g("pipe").innerHTML=h;
 if(typeof applyView==="function")applyView()}
 
@@ -712,7 +713,7 @@ async function uploadProjectionWorkbook(){
   if(result.error)throw result.error;
   PRINT_PROJECTION_DATA=all;PRINT_PROJECTION_NAME=file.name;PRINT_PROJECTION_UPDATED=new Date().toISOString();
   try{localStorage.setItem("printProjectionWorkbookBackup",JSON.stringify({workbook_name:PRINT_PROJECTION_NAME,sheets:PRINT_PROJECTION_DATA,updated_at:PRINT_PROJECTION_UPDATED,updated_by:CRM_CURRENT_EMAIL||""}))}catch(cacheError){console.warn("Print Projection local backup unavailable",cacheError)}
-  renderProjectionWorkbook();projectionStatus("Imported successfully: "+Object.keys(all).length+" worksheets, "+total.toLocaleString()+" data rows. Saved to the shared CRM database.");
+  renderProjectionWorkbook();if(typeof pipe==="function")pipe();projectionStatus("Imported successfully: "+Object.keys(all).length+" worksheets, "+total.toLocaleString()+" data rows. Saved to the shared CRM database.");
  }catch(e){console.error("Print Projection import failed",e);projectionStatus("Import failed; existing saved workbook was kept. "+(e&&e.message?e.message:"Please check the file and try again."))}
  finally{if(btn)btn.disabled=false}
 }
@@ -723,7 +724,7 @@ async function loadProjectionWorkbook(){
  try{
   var res=await authClient.from("crm_print_projection_workbooks").select("workbook_name,sheets,updated_by,updated_at").eq("id",1).maybeSingle();
   if(res.error){if(restoreLocalProjectionBackup())projectionStatus("Showing saved local backup; shared workbook could not be reached. "+res.error.message);else projectionStatus("Could not load shared workbook: "+res.error.message);return}
-  if(res.data&&res.data.sheets&&Object.keys(res.data.sheets).length){PRINT_PROJECTION_DATA=res.data.sheets;PRINT_PROJECTION_NAME=res.data.workbook_name||"";PRINT_PROJECTION_UPDATED=res.data.updated_at||"";try{localStorage.setItem("printProjectionWorkbookBackup",JSON.stringify({workbook_name:PRINT_PROJECTION_NAME,sheets:PRINT_PROJECTION_DATA,updated_at:PRINT_PROJECTION_UPDATED,updated_by:res.data.updated_by||""}))}catch(cacheError){console.warn("Print Projection local backup unavailable",cacheError)}renderProjectionWorkbook();projectionStatus("Loaded shared workbook: "+PRINT_PROJECTION_NAME)}
+  if(res.data&&res.data.sheets&&Object.keys(res.data.sheets).length){PRINT_PROJECTION_DATA=res.data.sheets;PRINT_PROJECTION_NAME=res.data.workbook_name||"";PRINT_PROJECTION_UPDATED=res.data.updated_at||"";try{localStorage.setItem("printProjectionWorkbookBackup",JSON.stringify({workbook_name:PRINT_PROJECTION_NAME,sheets:PRINT_PROJECTION_DATA,updated_at:PRINT_PROJECTION_UPDATED,updated_by:res.data.updated_by||""}))}catch(cacheError){console.warn("Print Projection local backup unavailable",cacheError)}renderProjectionWorkbook();if(typeof pipe==="function")pipe();projectionStatus("Loaded shared workbook: "+PRINT_PROJECTION_NAME)}
   else if(!restoreLocalProjectionBackup())projectionStatus("No Print Projection workbook has been imported yet. Choose the Excel file and click Import.");
   else projectionStatus("Showing saved local backup: "+PRINT_PROJECTION_NAME+". Upload a new workbook to replace it.");
  }catch(e){if(restoreLocalProjectionBackup())projectionStatus("Showing saved local backup; shared workbook could not be reached.");else projectionStatus("Could not load workbook: "+(e.message||"connection error"))}
