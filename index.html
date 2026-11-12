@@ -394,11 +394,11 @@ var types={},cour={};D.forEach(function(r){r["Return Types"].split(" | ").forEac
 sel(g("tf"),"All return types",Object.keys(types).sort());
 sel(g("cf"),"All couriers",Object.keys(cour).sort(function(a,b){return cour[b]-cour[a]}));
 function pd(s){if(!s)return null;var z=String(s).trim(),m=z.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})\s*(AM|PM))?$/i),d;if(m){var h=Number(m[4]||0),ap=(m[6]||"").toUpperCase();if(ap==="PM"&&h<12)h+=12;if(ap==="AM"&&h===12)h=0;d=new Date(Number(m[3]),Number(m[2])-1,Number(m[1]),h,Number(m[5]||0))}else{d=new Date(z.replace(" ","T"))}return isNaN(d.getTime())?null:d} function dd(s){var d=pd(s);return d?Math.max(0,Math.floor((Date.now()-d.getTime())/864e5)):null}
-function tat(r){return r["SR List"].length?dd(r["SR List"][0].date):null}
+function tat(r){var list=Array.isArray(r["SR List"])?r["SR List"]:[];return list.length?dd(list[0].date):null}
 function tatH(r){var v=tat(r);if(v==null)return'<span class=m>—</span>';var c=r["WH Status"]==="Complete"?"s s5":v<=3?"s s4":v<=7?"s s0":"s s6";return'<span class="'+c+'">'+v+' d</span>'}
-function opn(){return R.filter(function(r){return r["SR List"].length&&r["WH Status"]!=="Complete"})}
-function avg(){var a=opn().map(tat);return a.length?(a.reduce(function(t,v){return t+v},0)/a.length).toFixed(1):"—"}
-function gt7(){return opn().filter(function(r){return tat(r)>7}).length}
+function opn(){return R.filter(function(r){return Array.isArray(r["SR List"])&&r["SR List"].length>0&&r["WH Status"]!=="Complete"})}
+function avg(){var a=opn().map(tat).filter(function(v){return v!==null&&isFinite(v)});return a.length?(a.reduce(function(t,v){return t+v},0)/a.length).toFixed(1):"—"}
+function gt7(){return opn().filter(function(r){var v=tat(r);return v!==null&&v>7}).length}
 var PS=[["pending","Pending",["#fffbeb","#fde68a","#b45309"]],["approved","Approved",["#eff6ff","#bfdbfe","#1d4ed8"]],["in transit","In transit",["#fff7ed","#fed7aa","#c2410c"]],["cn pending","CN pending",["#f5f3ff","#ddd6fe","#6d28d9"]],["cn uploaded","CN uploaded",["#f0fdf4","#bbf7d0","#15803d"]]];
 var WT=[["No SR record","No SR yet",["#f8fafc","#e2e8f0","#475569"]],["Under Scanning","Under scanning",["#fffbeb","#fde68a","#b45309"]],["Under Segregation","Under segregation",["#f5f3ff","#ddd6fe","#6d28d9"]],["Complete","Complete",["#f0fdf4","#bbf7d0","#15803d"]]];
 var GN=["pending → approved","approved → in transit","in transit → received at warehouse","received → CN uploaded"];
