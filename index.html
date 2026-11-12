@@ -571,9 +571,9 @@ function normId(v){return String(v==null?"":v).trim().replace(/[.]+$/,"").replac
 function ensureColumns(rows,label,required){if(!rows.length)throw new Error(label+" CSV is empty.");var missing=required.filter(function(k){return !Object.prototype.hasOwnProperty.call(rows[0],k)});if(missing.length)throw new Error(label+" CSV is missing required column(s): "+missing.join(", "))}
 function warehouseRecord(w){return{sr:w["SR No"]||w["SR No."]||"",date:w["Created Date"]||w["Date"]||"",transport:w["Transport_Name"]||w["Transport"]||w["Transport Name"]||"",packets:w["Packets"]||"",weight:w["Weight"]||"",comments:w["Comments"]||"",status:w["Status"]||w["Status_ID"]||""}}
 function syncWarehouseLinks(){
- var by={},sales={},unmatched=[];
+ var by=Object.create(null),sales=Object.create(null),unmatched=[];
  (WHSNAP||[]).forEach(function(w){var id=normId(w["Authorization No"]);if(id)(by[id]||(by[id]=[])).push(warehouseRecord(w));else unmatched.push(w)});
- D.forEach(function(r){sales[normId(r["Submission ID"])]=1});
+ D.forEach(function(r){var id=normId(r["Submission ID"]);if(id)sales[id]=1});
  (WHSNAP||[]).forEach(function(w){var id=normId(w["Authorization No"]);if(id&&!sales[id])unmatched.push(w)});
  D.forEach(function(r){var list=(by[normId(r["Submission ID"])]||[]).slice();list.sort(function(a,b){var x=pd(a.date),y=pd(b.date);return (y?y.getTime():0)-(x?x.getTime():0)});var sr=list[0]||{};r["SR List"]=list;r["SR Count"]=list.length;r["SR No"]=sr.sr||"";r["WH Status"]=sr.status||"";r["SR Created"]=sr.date||"";r["WH Transport"]=sr.transport||"";r["WH Packets"]=sr.packets||"";r["WH Weight"]=sr.weight||"";r["WH Comments"]=sr.comments||"";r["WH TAT"]=tat(r);r["_s"]=[r["Submission ID"],r["Customer"],r["Customer Code"],r["School"],r["Employee Email"],r["RM Email"],r["Invoice Nos"],r["Tracking Number"],r["ASR No"],r["SR No"]].join(" ").toLowerCase()});
  U=unmatched.map(function(w){return{sr:w["SR No"]||w["SR No."]||"",auth:w["Authorization No"]||"",cust:w["Customer_Name"]||w["Customer"]||"",status:w["Status"]||w["Status_ID"]||""}})
