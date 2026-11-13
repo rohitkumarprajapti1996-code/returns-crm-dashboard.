@@ -244,6 +244,8 @@ td{font-size:10px!important}
  .login:after{display:none!important}
  .login-card{margin:0!important;flex-basis:min(455px,100%)!important}
 }
+/* Keep the login overlay hidden after a successful sign-in and while hidden */
+.login[hidden],.crm-authenticated .login{display:none!important}
 @media(max-width:520px){
  .login-card{padding:23px 19px!important;border-radius:21px!important}
  .login h1{font-size:24px!important}
