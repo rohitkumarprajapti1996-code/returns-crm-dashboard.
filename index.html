@@ -1517,11 +1517,11 @@ function dashboardAllSources(){
  var kStages=stageKeys.map(function(x,i){return{label:x,count:kc[x],color:["#2875ef","#eab308","#7138e8","#0d9488","#10a65a","#dc2626","#64748b"][i%7],books:books[x]||0}});
  var saleStages=Object.keys(wc).map(function(x,i){return{label:x,count:wc[x],color:["#2875ef","#eab308","#7138e8","#0d9488","#10a65a"][i%5]}});
  var pd=PRINT_PROJECTION_DATA||{},names=Object.keys(pd),sheetRows=0,plan=0,inward=0,po=0,skuMap={},poRows=0,poTotalRows=0;
- names.forEach(function(name){var sh=pd[name]||{},rr=sh.rows||[],hs=sh.headers||[];sheetRows+=rr.length;
+ names.forEach(function(name){var sh=pd[name]||{},rr=sh.rows||[],hs=sh.headers||[];
   function key(re){return hs.find(function(h){return re.test(String(h))})||""}
   var skuKey=key(/sku\s*code/i),titleKey=key(/sku\s*\/\s*title|title\s*name|name\s*2|book\s*title/i),inKey=key(/inward\s*qty|inwarded\s*qty|received\s*qty/i),poKey=key(/^po$|^po\s*$|purchase\s*order/i);
   var planKey=name==="Lot_2"?key(/final\s*quantity\s*\(approved\)|approved\s*quantity/i):name==="Blooming Buds"?key(/^qty$/i):key(/final\s*printing\s*qty|printing\s*qty/i);
-  rr.forEach(function(r){var sku=String((skuKey&&r[skuKey])||"").trim(),title=String((titleKey&&r[titleKey])||"").trim(),id=sku||title;if(id){if(!skuMap[id])skuMap[id]={planned:0,inward:0,title:title||id,po:false};var p=num(planKey&&r[planKey]),got=num(inKey&&r[inKey]);skuMap[id].planned+=p;skuMap[id].inward+=got;skuMap[id].po=skuMap[id].po||/^ERP-PO-/i.test(String(poKey&&r[poKey]||"").trim())}var p2=num(planKey&&r[planKey]),g2=num(inKey&&r[inKey]);plan+=p2;inward+=g2;poTotalRows++;if(/^ERP-PO-/i.test(String(poKey&&r[poKey]||"").trim()))poRows++});
+  rr.forEach(function(r){var sku=String((skuKey&&r[skuKey])||"").trim(),title=String((titleKey&&r[titleKey])||"").trim(),id=sku||title;if(id){sheetRows++;if(!skuMap[id])skuMap[id]={planned:0,inward:0,title:title||id,po:false};var p=num(planKey&&r[planKey]),got=num(inKey&&r[inKey]);skuMap[id].planned+=p;skuMap[id].inward+=got;skuMap[id].po=skuMap[id].po||/^ERP-PO-/i.test(String(poKey&&r[poKey]||"").trim());var p2=num(planKey&&r[planKey]),g2=num(inKey&&r[inKey]);plan+=p2;inward+=g2;poTotalRows++;if(/^ERP-PO-/i.test(String(poKey&&r[poKey]||"").trim()))poRows++}});
  });
  var skuIds=Object.keys(skuMap),fully=0,partial=0,none=0,skuIn=0,skuPending=0;
  skuIds.forEach(function(id){var x=skuMap[id];if(x.inward>0)skuIn++;if(x.planned>0&&x.inward>=x.planned)fully++;else if(x.inward>0&&x.inward<x.planned)partial++;else none++;if(x.inward<x.planned)skuPending++;if(x.po)po++});
