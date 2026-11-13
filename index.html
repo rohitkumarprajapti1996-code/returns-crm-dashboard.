@@ -1139,6 +1139,26 @@ body.crm-authenticated #dr{
   body.crm-authenticated button:hover{transform:none!important}
 }
 
+
+.crm-mis-section{margin:22px 0;padding:20px;border:1px solid var(--bd);border-radius:18px;background:var(--card,#fff)}
+.crm-mis-section h2{margin:0 0 6px;font-size:20px;color:var(--tx)}
+.crm-mis-section>p{margin:0 0 16px;color:var(--mu);font-size:13px}
+.crm-mis-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.crm-mis-card{min-width:0;border:1px solid var(--bd);border-radius:13px;padding:14px;background:var(--card,#fff)}
+.crm-mis-card h3{font-size:14px;margin:0 0 12px;color:var(--tx)}
+.crm-mis-card> b{font-size:26px;display:block;color:var(--tx)}
+.crm-mis-card>small{display:block;color:var(--mu);margin-top:5px}
+.crm-mis-list{display:grid;gap:8px}
+.crm-mis-row{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--bd);font-size:12px}
+.crm-mis-row:last-child{border-bottom:0}
+.crm-mis-row span{color:var(--mu);overflow-wrap:anywhere}
+.crm-mis-row b{white-space:nowrap;color:var(--tx)}
+.crm-mis-row small{color:var(--mu);font-weight:500}
+.crm-mis-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:12px}
+.crm-mis-kpi{border:1px solid var(--bd);border-radius:11px;padding:10px;min-width:0}
+.crm-mis-kpi span,.crm-mis-kpi small{display:block;color:var(--mu);font-size:11px}
+.crm-mis-kpi b{display:block;font-size:19px;color:var(--tx);margin:4px 0;overflow-wrap:anywhere}
+@media(max-width:700px){.crm-mis-section{padding:13px}.crm-mis-grid{grid-template-columns:1fr}.crm-mis-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style></head><body><div class="login" id="loginScreen" aria-modal="true" role="dialog" aria-labelledby="loginTitle"><section class="login-showcase" aria-label="Returns CRM overview">
   <div class="showcase-topline"><span class="showcase-live-dot"></span><span>PW OPERATIONS SUITE</span><span class="showcase-topline-rule"></span><span class="showcase-version">WORKSPACE / 01</span></div>
   <div class="showcase-copy">
@@ -1483,22 +1503,55 @@ if(typeof applyView==="function")applyView()}
 
 function dashboardAllSources(){
  function fmt(v){return Number(v||0).toLocaleString()}
- function st(label,count,color,sub){return '<div class="crm-stage" style="border-color:'+color+'44"><span>'+esc(label)+'</span><b>'+fmt(count)+'</b><small>'+esc(sub||"records")+'</small></div>'}
+ function pct(v,t){return t?(v/t*100).toFixed(1)+"%":"0.0%"}
+ function st(label,count,color,sub,total){return '<div class="crm-stage" style="border-color:'+color+'44"><span>'+esc(label)+'</span><b>'+fmt(count)+'</b><small>'+esc(sub||"records")+(total!=null?' · '+pct(count,total):'')+'</small></div>'}
+ function num(v){var z=Number(String(v==null?"":v).replace(/[,\s]/g,""));return Number.isFinite(z)?z:0}
+ function group(rows,keyFn){var m={};rows.forEach(function(r){var k=String(keyFn(r)||"Not specified").trim()||"Not specified";m[k]=(m[k]||0)+1});return m}
+ function rowsBreak(title,m,total,limit){var keys=Object.keys(m).sort(function(a,b){return m[b]-m[a]}).slice(0,limit||12);return '<section class="crm-mis-card"><h3>'+esc(title)+'</h3><div class="crm-mis-list">'+keys.map(function(k){return '<div class="crm-mis-row"><span>'+esc(k)+'</span><b>'+fmt(m[k])+' <small>'+pct(m[k],total)+'</small></b></div>'}).join("")+'</div></section>'}
+ function qtyBreak(title,value,base){return '<div class="crm-mis-kpi"><span>'+esc(title)+'</span><b>'+fmt(value)+'</b><small>'+pct(value,base)+'</small></div>'}
+ function parseLocalDate(v){var s=String(v||"").trim();if(!s)return null;var m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?)?/i);if(m){var day=+m[1],month=+m[2]-1,year=+m[3],hh=+(m[4]||0),mm=+(m[5]||0),ss=+(m[6]||0),ap=(m[7]||"").toUpperCase();if(ap==="PM"&&hh<12)hh+=12;if(ap==="AM"&&hh===12)hh=0;var d=new Date(year,month,day,hh,mm,ss);return isNaN(d.getTime())?null:d}var x=new Date(s);return isNaN(x.getTime())?null:x}
  var k=Array.isArray(D)?D:[],w=Array.isArray(WHSNAP)?WHSNAP:[],kc={},wc={},books={};
- k.forEach(function(r){var x=String(r.Stage||"Unknown").trim();kc[x]=(kc[x]||0)+1;books[x]=(books[x]||0)+n(r["Filled Qty"])});
- w.forEach(function(r){var x=String(r.Status||r.status||"Unknown").trim();wc[x]=(wc[x]||0)+1});
- var kStages=[["Pending","pending","#eab308"],["Approved","approved","#2875ef"],["In Transit","in transit","#f47a18"],["CN Pending","cn pending","#7138e8"],["CN Uploaded","cn uploaded","#10a65a"]];
- var saleStages=Object.keys(wc).map(function(x,i){return{label:x,count:wc[x],color:["#2875ef","#eab308","#7138e8","#0d9488","#10a65a"][i%5]}}),pd=PRINT_PROJECTION_DATA||{},names=Object.keys(pd),master=pd["Master Data"]||(names.length?pd[names[0]]:null),rows=master&&master.rows||[],hs=master&&master.headers||[];
- function key(re){return hs.find(function(h){return re.test(String(h))})||""}function num(v){var z=Number(String(v==null?"":v).replace(/[,\s]/g,""));return Number.isFinite(z)?z:0}
- var tk=key(/sku\s*\/\s*title|title\s*name|name\s*2|book\s*title/i),pk=key(/po\s*status|purchase\s*order\s*status/i),ik=key(/inward\s*qty|inwarded\s*qty|received\s*qty/i),lk=hs.filter(function(h){return /print\s*qty|lot\s*\d+\s*print/i.test(String(h))}),titles={},po=0,inward=0,pending=0;
- rows.forEach(function(r){var t=String((tk&&r[tk])||r["SKU Code"]||"").trim();if(t)titles[t]=1;if(t&&pk&&String(r[pk]||"").trim()&&!/^(pending|not raised|not created|n\/a|na|-)$/i.test(String(r[pk]).trim()))po++;var got=num(ik&&r[ik]);inward+=got;pending+=Math.max(0,lk.reduce(function(a,x){return a+num(r[x])},0)-got)});
- var lotNames=["Lot_1","Lot_2","Lot_3","Blooming Buds"].filter(function(x){return !!pd[x]});
- var lotHtml=lotNames.map(function(x){var sh=pd[x]||{},rr=sh.rows||[];return '<div class="crm-lot"><b>'+esc(x)+'</b><div class="crm-muted">'+fmt(rr.length)+' worksheet rows</div><div class="crm-progress"><span style="width:'+Math.min(100,rr.length?100:0)+'%"></span></div></div>'}).join("");
- var ktotal=k.length,ks=kStages.map(function(x){var found=Object.keys(kc).find(function(y){return y.toLowerCase()===x[1]});return st(x[0],found?kc[found]:0,x[2],fmt(found?books[found]:0)+' books')}).join("");
- var sh='<div class="crm-note">ⓘ Each source is calculated independently from its own uploaded file. Uploading a file updates only that source.</div><div class="crm-source-grid">'
- +'<section class="crm-source"><div class="crm-source-title blueText">▣ &nbsp;K8 RETURNS <small>K8 source only</small></div><div class="crm-total">'+fmt(ktotal)+'</div><div class="crm-muted">Total returns · '+fmt(k.reduce(function(a,r){return a+n(r["Filled Qty"])},0))+' books filled</div><div class="crm-stages">'+ks+'</div></section>'
- +'<section class="crm-source"><div class="crm-source-title greenText">▣ &nbsp;SALE RETURNS <small>WH Sale Returns source only</small></div><div class="crm-total">'+fmt(w.length)+'</div><div class="crm-muted">Total Sale Returns records</div><div class="crm-stages">'+(saleStages.length?saleStages.map(function(x){return st(x.label,x.count,x.color,"records")}).join(""):'<div class="crm-muted">No Sale Returns file loaded.</div>')+'</div></section>'
- +'<section class="crm-source"><div class="crm-source-title purpleText">▤ &nbsp;PRINT PROJECTION <small>Workbook source only</small></div><div class="crm-total">'+fmt(Object.keys(titles).length)+'</div><div class="crm-muted">Unique titles · '+fmt(names.length)+' worksheets</div><div class="crm-stages">'+st("PO created",po,"#2875ef","titles")+st("Books received",inward,"#0d9488","books")+st("Pending inward",pending,"#f04452","books")+'</div><div class="crm-lots">'+(lotHtml||'<div class="crm-muted">No projection workbook loaded.</div>')+'</div></section></div>';
+ k.forEach(function(r){var x=String(r.Stage||"Unknown").trim()||"Unknown";kc[x]=(kc[x]||0)+1;books[x]=(books[x]||0)+num(r["Filled Qty"])});
+ w.forEach(function(r){var x=String(r.Status||r.status||"Unknown").trim()||"Unknown";wc[x]=(wc[x]||0)+1});
+ var stageKeys=Object.keys(kc).sort(function(a,b){return kc[b]-kc[a]});
+ var kStages=stageKeys.map(function(x,i){return{label:x,count:kc[x],color:["#2875ef","#eab308","#7138e8","#0d9488","#10a65a","#dc2626","#64748b"][i%7],books:books[x]||0}});
+ var saleStages=Object.keys(wc).map(function(x,i){return{label:x,count:wc[x],color:["#2875ef","#eab308","#7138e8","#0d9488","#10a65a"][i%5]}});
+ var pd=PRINT_PROJECTION_DATA||{},names=Object.keys(pd),sheetRows=0,plan=0,inward=0,po=0,skuMap={},poRows=0,poTotalRows=0;
+ names.forEach(function(name){var sh=pd[name]||{},rr=sh.rows||[],hs=sh.headers||[];
+  function key(re){return hs.find(function(h){return re.test(String(h))})||""}
+  var skuKey=key(/sku\s*code/i),titleKey=key(/sku\s*\/\s*title|title\s*name|name\s*2|book\s*title/i),inKey=key(/inward\s*qty|inwarded\s*qty|received\s*qty/i),poKey=key(/^po$|^po\s*$|purchase\s*order/i);
+  var planKey=name==="Lot_2"?key(/final\s*quantity\s*\(approved\)|approved\s*quantity/i):name==="Blooming Buds"?key(/^qty$/i):key(/final\s*printing\s*qty|printing\s*qty/i);
+  rr.forEach(function(r){var sku=String((skuKey&&r[skuKey])||"").trim(),title=String((titleKey&&r[titleKey])||"").trim(),id=sku||title;if(id){sheetRows++;if(!skuMap[id])skuMap[id]={planned:0,inward:0,title:title||id,po:false};var p=num(planKey&&r[planKey]),got=num(inKey&&r[inKey]);skuMap[id].planned+=p;skuMap[id].inward+=got;skuMap[id].po=skuMap[id].po||/^ERP-PO-/i.test(String(poKey&&r[poKey]||"").trim());var p2=num(planKey&&r[planKey]),g2=num(inKey&&r[inKey]);plan+=p2;inward+=g2;poTotalRows++;if(/^ERP-PO-/i.test(String(poKey&&r[poKey]||"").trim()))poRows++}});
+ });
+ var skuIds=Object.keys(skuMap),fully=0,partial=0,none=0,skuIn=0,skuPending=0;
+ skuIds.forEach(function(id){var x=skuMap[id];if(x.inward>0)skuIn++;if(x.planned>0&&x.inward>=x.planned)fully++;else if(x.inward>0&&x.inward<x.planned)partial++;else none++;if(x.inward<x.planned)skuPending++;if(x.po)po++});
+ var pending=Math.max(0,plan-inward),over=Math.max(0,inward-plan),poPending=Math.max(0,sheetRows-poRows);
+ var ktotal=k.length,kfill=k.reduce(function(a,r){return a+num(r["Filled Qty"])},0),krecv=k.reduce(function(a,r){return a+num(r["Received Qty"])},0);
+ var kStagesHtml=kStages.map(function(x){return st(x.label,x.count,x.color,fmt(x.books)+" filled books",ktotal)}).join("");
+ var lotHtml=names.map(function(x){var sh=pd[x]||{},rr=sh.rows||[];return '<div class="crm-lot"><b>'+esc(x)+'</b><div class="crm-muted">'+fmt(rr.length)+' worksheet rows · '+pct(rr.length,sheetRows)+'</div><div class="crm-progress"><span style="width:'+Math.min(100,rr.length?rr.length/sheetRows*100:0)+'%"></span></div></div>'}).join("");
+ var saleTotal=w.length,openRows=w.filter(function(r){return !/complete/i.test(String(r.Status||""))}),today=new Date();today.setHours(0,0,0,0);
+ function calcAges(source){return source.map(function(r){var d=parseLocalDate(r["Created Date"]);return d?Math.max(0,Math.floor((today-new Date(d.getFullYear(),d.getMonth(),d.getDate()))/86400000)):null}).filter(function(x){return x!==null})}
+ var allAges=calcAges(w),ageRows=calcAges(openRows),ageBuckets={"0–3 days":0,"4–7 days":0,"8–14 days":0,"15+ days":0},allAgeBuckets={"0–3 days":0,"4–7 days":0,"8–14 days":0,"15+ days":0};
+ function fillAgeBuckets(values,buckets){values.forEach(function(a){buckets[a<=3?"0–3 days":a<=7?"4–7 days":a<=14?"8–14 days":"15+ days"]++})}fillAgeBuckets(ageRows,ageBuckets);fillAgeBuckets(allAges,allAgeBuckets);
+ var ageTotal=ageRows.length,avgAge=ageTotal?ageRows.reduce(function(a,b){return a+b},0)/ageTotal:0,maxAge=ageTotal?Math.max.apply(null,ageRows):0,allAgeAvg=allAges.length?allAges.reduce(function(a,b){return a+b},0)/allAges.length:0;
+ var saleBreaks=[
+  rowsBreak("Sale Returns · status",wc,saleTotal,12),
+  rowsBreak("Sale Returns · state",group(w,function(r){return r.State_Name||r.State}),saleTotal,12),
+  rowsBreak("Sale Returns · transporter",group(w,function(r){return r.Transport_Name||r.Transport}),saleTotal,12),
+  rowsBreak("Sale Returns · return type",group(w,function(r){return r["Return Type"]}),saleTotal,12),
+  rowsBreak("Sale Returns · warehouse",group(w,function(r){return r.Warehouse_Name||r.Warehouse}),saleTotal,12),
+  rowsBreak("Sale Returns · shipping method",group(w,function(r){return r.Shipping_Method_Name||r["Shipping Method"]}),saleTotal,12)
+ ].join("");
+ var kOps=group(k,function(r){return r["Ops Status"]}),kCn=group(k,function(r){return r["CN Status"]});
+ var kQty=k.reduce(function(a,r){a.received+=num(r["Received Qty"]);a.ok+=num(r["OK Qty"]);a.bad+=num(r["Bad Qty"]);a.sample+=num(r["Sample Qty"]);a.excess+=num(r["Excess Qty"]);a.cn+=num(r["CN Qty"]);return a},{received:0,ok:0,bad:0,sample:0,excess:0,cn:0});
+ var sh='<div class="crm-note">ⓘ Each source is calculated independently from its own uploaded file. All percentages are calculated against the relevant source total. Sale Return ageing = today minus Created Date.</div><div class="crm-source-grid">'
+ +'<section class="crm-source"><div class="crm-source-title blueText">▣ &nbsp;K8 RETURNS <small>K8 source only</small></div><div class="crm-total">'+fmt(ktotal)+'</div><div class="crm-muted">Total returns · '+fmt(kfill)+' books filled · '+pct(ktotal,ktotal)+'</div><div class="crm-stages">'+kStagesHtml+'</div><div class="crm-mis-kpis">'+qtyBreak("Received books",krecv,kfill)+qtyBreak("OK books",kQty.ok,krecv)+qtyBreak("Bad books",kQty.bad,krecv)+qtyBreak("Sample books",kQty.sample,krecv)+qtyBreak("Excess books",kQty.excess,krecv)+qtyBreak("CN books",kQty.cn,kfill)+'</div></section>'
+ +'<section class="crm-source"><div class="crm-source-title greenText">▣ &nbsp;SALE RETURNS <small>WH Sale Returns source only</small></div><div class="crm-total">'+fmt(saleTotal)+'</div><div class="crm-muted">Total Sale Returns records · '+pct(saleTotal,saleTotal)+'</div><div class="crm-stages">'+(saleStages.length?saleStages.map(function(x){return st(x.label,x.count,x.color,"records",saleTotal)}).join(""):'<div class="crm-muted">No Sale Returns file loaded.</div>')+'</div><div class="crm-mis-kpis">'+qtyBreak("Open returns",openRows.length,saleTotal)+qtyBreak("Records with Created Date",ageTotal,saleTotal)+'</div></section>'
+ +'<section class="crm-source"><div class="crm-source-title purpleText">▤ &nbsp;PRINT PROJECTION <small>Workbook source only</small></div><div class="crm-total">'+fmt(skuIds.length)+'</div><div class="crm-muted">Unique SKU codes · '+fmt(sheetRows)+' worksheet rows</div><div class="crm-stages">'+st("PO created",po,"#2875ef","unique SKUs",skuIds.length)+st("PO pending",Math.max(0,sheetRows-poRows),"#d97706","worksheet rows",sheetRows)+st("Books inwarded",inward,"#0d9488","books",plan)+st("Pending inward",pending,"#f04452","books",plan)+'</div><div class="crm-mis-kpis">'+qtyBreak("Fully inwarded titles",fully,skuIds.length)+qtyBreak("Partially inwarded titles",partial,skuIds.length)+qtyBreak("Not inwarded titles",none,skuIds.length)+qtyBreak("Inward completion",inward,plan)+qtyBreak("Pending quantity",pending,plan)+qtyBreak("Over received",over,inward)+'</div><div class="crm-lots">'+(lotHtml||'<div class="crm-muted">No projection workbook loaded.</div>')+'</div></section></div>';
+ sh+='<div class="crm-mis-section"><h2>Sale Returns · TAT ageing</h2><p>Ageing = today minus Created Date. The first breakdown covers all returns; the second isolates open returns.</p><div class="crm-mis-kpis">'+qtyBreak("All returns",saleTotal,saleTotal)+qtyBreak("Records with Created Date",allAges.length,saleTotal)+qtyBreak("Open records",openRows.length,saleTotal)+qtyBreak("Open records with dates",ageTotal,openRows.length)+qtyBreak("Average open age",avgAge.toFixed(1)+" days",null)+qtyBreak("Maximum open age",maxAge+" days",null)+qtyBreak("Average age · all",allAgeAvg.toFixed(1)+" days",null)+'</div><h3>All returns</h3><div class="crm-mis-grid">'+Object.keys(allAgeBuckets).map(function(k){return '<div class="crm-mis-card"><h3>'+k+'</h3><b>'+fmt(allAgeBuckets[k])+'</b><small>'+pct(allAgeBuckets[k],allAges.length)+' of all returns with Created Date</small></div>'}).join("")+'</div><h3 style="margin-top:18px">Open returns only</h3><div class="crm-mis-grid">'+Object.keys(ageBuckets).map(function(k){return '<div class="crm-mis-card"><h3>'+k+'</h3><b>'+fmt(ageBuckets[k])+'</b><small>'+pct(ageBuckets[k],ageTotal)+' of open returns with Created Date</small></div>'}).join("")+'</div></div>';
+ sh+='<div class="crm-mis-section"><h2>Sale Returns · Complete bifurcation</h2><p>Top 12 values per category are shown; full records remain available in the Sale Returns table and export.</p><div class="crm-mis-grid">'+saleBreaks+'</div></div>';
+ sh+='<div class="crm-mis-section"><h2>K8 Returns · Operational bifurcation</h2><p>Stage, Ops Status and CN Status are independent fields. Percentages use all K8 records as the denominator.</p><div class="crm-mis-grid">'+rowsBreak("K8 · Ops Status",kOps,ktotal,12)+rowsBreak("K8 · CN Status",kCn,ktotal,12)+'</div></div>';
+ sh+='<div class="crm-mis-section"><h2>Print Projection · inward reconciliation</h2><p>Title counts use unique SKU codes. Planned quantities use each worksheet’s approved/printing quantity field; PO is counted only when the PO cell begins with ERP-PO-.</p><div class="crm-mis-grid"><div class="crm-mis-card"><h3>Title inward status</h3>'+[['Fully inwarded',fully],['Partially inwarded',partial],['Not inwarded',none]].map(function(x){return '<div class="crm-mis-row"><span>'+x[0]+'</span><b>'+fmt(x[1])+' <small>'+pct(x[1],skuIds.length)+'</small></b></div>'}).join("")+'</div><div class="crm-mis-card"><h3>Quantity reconciliation</h3>'+[['Planned quantity',plan],['Books inwarded',inward],['Pending inward',pending],['Over received',over]].map(function(x){return '<div class="crm-mis-row"><span>'+x[0]+'</span><b>'+fmt(x[1])+' <small>'+pct(x[1],plan)+'</small></b></div>'}).join("")+'</div><div class="crm-mis-card"><h3>PO reconciliation</h3>'+[['ERP PO created',poRows],['PO pending',Math.max(0,sheetRows-poRows)]].map(function(x){return '<div class="crm-mis-row"><span>'+x[0]+'</span><b>'+fmt(x[1])+' <small>'+pct(x[1],sheetRows)+'</small></b></div>'}).join("")+'</div></div></div>';
  return sh;
 }
 var DS=[["pending","Pending","#eab308"],["approved","Approved","#2563eb"],["in transit","In transit","#f97316"],["cn pending","CN pending","#7c3aed"],["cn uploaded","CN uploaded","#16a34a"],["cancelled","Cancelled","#6b7280"],["rejected","Rejected","#dc2626"]];
